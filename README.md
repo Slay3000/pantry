@@ -1,70 +1,115 @@
-# Getting Started with Create React App
+Pantry Manager
+Pantry Manager is a barcode‑powered pantry inventory application built with React and Supabase.
+It helps users add, remove, organize, and track food items using barcode scanning, product auto‑fill, expiration dates, and grouped item display.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Features
+Barcode Scanning
+Scan barcodes to add items.
+Scan barcodes to remove items in remove mode.
+Automatically fills product data using:
+Previously added items from your database.
+OpenFoodFacts as a fallback.
+Add and Remove Modes
+Add Mode: Add items manually or by barcode scanning.
+Remove Mode: Scan a barcode to remove one matching item from inventory.
+Product Grouping
+Items sharing the same barcode (or product name if barcode is missing) are grouped into a single card in the UI.
 
-## Available Scripts
+Example:
 
-In the project directory, you can run:
+Milk (3 units)
 
-### `npm start`
+- Expires: 2026-05-12
+- Expires: 2026-05-15
+- Expires: 2026-05-20
+  Expiration Tracking
+  Sorted by soonest expiration.
+  Color‑coded expiration states:
+  expired
+  expiring soon
+  expiring this week
+  fresh
+  Collapsible list of expiration dates per product.
+  Category Support
+  Category auto‑detected from OpenFoodFacts.
+  Category can be manually edited.
+  Displayed in grouped product cards.
+  Future‑ready for a separate categories table.
+  Inline Editing
+  Edit expiration date per unit.
+  Delete individual units.
+  Product image, name, and category persist across units.
+  Modern UI / UX
+  Two‑tab interface:
+  Add / Remove products
+  Pantry item list
+  Clean, readable light theme.
+  Responsive layout that works well on mobile and desktop.
+  Tech Stack
+  Layer Technology
+  Frontend React (Create React App)
+  Backend Supabase (Postgres, Auth, REST)
+  Scanning ZXing Browser
+  Image Upload imgBB API
+  Product Data OpenFoodFacts API
+  Styling Custom CSS
+  Installation
+  Clone the repository:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+git clone https://github.com/<your-username>/<your-repo>.git
+cd your-repo
+Install dependencies:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+npm install
+Create a .env file:
 
-### `npm test`
+REACT_APP_SUPABASE_URL="https://<your-project>.supabase.co"
+REACT_APP_SUPABASE_ANON_KEY="<your-key>"
+REACT_APP_IMGBB_API_KEY="<your-imgbb-key>"
+Running the Application
+Development mode:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+npm start
+The app will run at:
 
-### `npm run build`
+http://localhost:3000/
+Build production version:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+npm run build
+Database Schema (Model A)
+The application uses one row per unit. No unit‑child table exists.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+pantry_items table
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+id uuid primary key
+pantry_id uuid (foreign key)
+name text
+category text
+barcode text
+image_url text
+image_id text
+delete_url text
+expiration_date date
+quantity integer default 1
+created_at timestamptz default now()
+This table is all the application needs for storing items.
 
-### `npm run eject`
+Development Notes
+Barcode scanning works through the user's camera via ZXing.
+Expiration dates are stored in ISO format.
+Items are grouped in the UI based on barcode (or name).
+All grouping and sorting is performed client‑side.
+Item removal deletes only a single matching row.
+Editing changes only the selected unit.
+Future Improvements
+This project is designed to support later enhancements such as:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Standalone categories table.
+Inventory analytics.
+Offline support through IndexedDB.
+Enhanced search and filtering.
+Push notifications for upcoming expirations.
+License
+This project is licensed under the MIT License.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Copyright © 2026 Vasyl
