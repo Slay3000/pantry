@@ -1,0 +1,47 @@
+/* Category */
+.item-category {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-bottom: 4px;
+}
+
+/* Collapsible title */
+.collapsible {
+    cursor: pointer;
+    margin-top: 8px;
+    font-weight: bold;
+}
+
+/* Highlighting */
+.exp-row {
+    display: flex;
+    gap: 8px;
+    padding: 6px 0;
+}
+
+.exp-row.expired {
+    color: #ff4e4e;
+    font-weight: bold;
+}
+
+.exp-row.soon {
+    color: #ff9d00;
+    font-weight: bold;
+}
+
+.exp-row.week {
+    color: #ffd000;
+}
+
+.exp-row.fresh {
+    color: #00d17a;
+}
+
+.item-image {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: block;
+}

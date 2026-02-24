@@ -1,25 +1,35 @@
-import logo from './logo.svg';
-import './App.css';
+import { useEffect, useState } from 'react'
+import { supabase } from './supabaseClient'
+import Login from './pages/Login'
+import Pantry from './pages/Pantry'
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    const [session, setSession] = useState(null)
+    const [loading, setLoading] = useState(true)
+
+    // Load stored session on startup
+    useEffect(() => {
+        async function loadSession() {
+            const { data } = await supabase.auth.getSession()
+            setSession(data.session)
+            setLoading(false)
+        }
+
+        loadSession()
+
+        // Listen for login/logout events
+        const { data: listener } = supabase.auth.onAuthStateChange(
+            (_event, session) => {
+                setSession(session)
+            },
+        )
+
+        return () => listener.subscription.unsubscribe()
+    }, [])
+
+    if (loading) return <p>Loading...</p>
+
+    return session ? <Pantry user={session.user} /> : <Login />
 }
 
-export default App;
+export default App
