@@ -1,5 +1,6 @@
-import { useState } from 'react'
 import './ItemCard.css'
+import { useState, useEffect } from 'react'
+import { supabase } from '../supabaseClient'
 
 function isoToDisplay(iso) {
     if (!iso) return 'No date'
@@ -24,7 +25,20 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
     const [editingUnitId, setEditingUnitId] = useState(null)
     const [editingExpiration, setEditingExpiration] = useState(null)
     const [open, setOpen] = useState(true)
+    const [editingCategory, setEditingCategory] = useState(false)
+    const [categories, setCategories] = useState([])
+    const [newCategoryName, setNewCategoryName] = useState('')
+    useEffect(() => {
+        async function fetchCategories() {
+            const { data } = await supabase
+                .from('categories')
+                .select('*')
+                .order('name')
 
+            if (data) setCategories(data)
+        }
+        fetchCategories()
+    }, [])
     const startEditUnit = (unit) => {
         setEditingUnitId(unit.id)
         setEditingExpiration(unit.expiration_date || '')
@@ -59,11 +73,93 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                     {product.name || 'Unnamed item'}
                 </div>
 
-                {product.category && (
-                    <div className="item-category">
-                        Category: {product.category}
-                    </div>
-                )}
+                <div className="item-category">
+                    <strong>Category:</strong>
+
+                    {!editingCategory ? (
+                        <>
+                            <span style={{ marginLeft: 6 }}>
+                                {product.category || 'None'}
+                            </span>
+                            <button
+                                onClick={() => setEditingCategory(true)}
+                                style={{ marginLeft: 12 }}
+                            >
+                                Edit
+                            </button>
+                        </>
+                    ) : (
+                        <div style={{ marginTop: 6 }}>
+                            <select
+                                value={product.category || ''}
+                                onChange={(e) => {
+                                    units.forEach((unit) => {
+                                        onSave(unit.id, {
+                                            category: e.target.value,
+                                        })
+                                    })
+                                    setEditingCategory(false)
+                                }}
+                                style={{ marginBottom: 8, padding: 6 }}
+                            >
+                                <option value="">Select category…</option>
+                                {categories.map((c) => (
+                                    <option key={c.id} value={c.name}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <div style={{ marginBottom: 8 }}>
+                                <input
+                                    type="text"
+                                    placeholder="New category"
+                                    value={newCategoryName}
+                                    onChange={(e) =>
+                                        setNewCategoryName(e.target.value)
+                                    }
+                                    style={{ marginRight: 8 }}
+                                />
+
+                                <button
+                                    onClick={async () => {
+                                        const trimmed = newCategoryName.trim()
+                                        if (!trimmed) return
+
+                                        const { data, error } = await supabase
+                                            .from('categories')
+                                            .insert({ name: trimmed })
+                                            .select()
+                                            .single()
+
+                                        if (error) {
+                                            alert(error.message)
+                                            return
+                                        }
+
+                                        setCategories((prev) => [...prev, data])
+                                        units.forEach((unit) => {
+                                            onSave(unit.id, {
+                                                category: data.name,
+                                            })
+                                        })
+                                        setNewCategoryName('')
+                                        setEditingCategory(false)
+                                    }}
+                                >
+                                    Add
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setEditingCategory(false)}
+                                style={{ marginTop: 4 }}
+                            >
+                                Done
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 <div className="item-qty">Units: {units.length}</div>
 

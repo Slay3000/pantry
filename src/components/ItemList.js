@@ -1,7 +1,21 @@
 import ItemCard from './ItemCard'
-
+import { useState, useEffect } from 'react'
+import { supabase } from '../supabaseClient'
 export default function ItemList({ items, onSave, onDelete }) {
     // Group items by product using barcode or name fallback
+    const [categories, setCategories] = useState([])
+
+    useEffect(() => {
+        async function fetchCategories() {
+            const { data } = await supabase
+                .from('categories')
+                .select('*')
+                .order('name')
+
+            if (data) setCategories(data)
+        }
+        fetchCategories()
+    }, [])
     const groups = {}
 
     for (const item of items) {

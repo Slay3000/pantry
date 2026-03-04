@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import { uploadToImgBB } from '../utils/uploadToImgBB'
 import BarcodeScanner from './BarcodeScanner'
 import { lookupBarcode } from '../utils/barcodeLookup'
+import { cleanCategory } from '../utils/cleanCategory'
 
 async function findProductInDB(barcode) {
     const { data, error } = await supabase
@@ -32,7 +33,8 @@ export default function AddItemForm({
     const [barcode, setBarcode] = useState('')
     const [imagePreview, setImagePreview] = useState(null)
     const [category, setCategory] = useState('')
-
+    const [categories, setCategories] = useState([])
+    const [newCategoryName, setNewCategoryName] = useState('')
     // Auto-fill using existing DB OR external API
     useEffect(() => {
         if (barcode.length < 8) return
@@ -51,7 +53,11 @@ export default function AddItemForm({
                     setImage(null)
                 }
                 if (localProduct.category) {
-                    setCategory(localProduct.category)
+                    const cleaned = cleanCategory(
+                        localProduct.category,
+                        categories.map((c) => c.name),
+                    )
+                    if (cleaned) setCategory(cleaned)
                 }
                 return
             }
@@ -61,8 +67,13 @@ export default function AddItemForm({
 
             if (product) {
                 if (product.name) setName(product.name)
-                if (product.category) setCategory(product.category)
-
+                if (product.category) {
+                    const cleaned = cleanCategory(
+                        product.category,
+                        categories.map((c) => c.name),
+                    )
+                    if (cleaned) setCategory(cleaned)
+                }
                 if (product.image) {
                     setImageUrlFromScan(product.image)
                     setImagePreview(product.image)
@@ -73,6 +84,17 @@ export default function AddItemForm({
 
         return () => clearTimeout(timeout)
     }, [barcode])
+    useEffect(() => {
+        async function fetchCategories() {
+            const { data, error } = await supabase
+                .from('categories')
+                .select('*')
+                .order('name')
+
+            if (data) setCategories(data)
+        }
+        fetchCategories()
+    }, [])
     // Update number of expiration inputs
     function handleUnitsCountChange(value) {
         const count = parseInt(value, 10)
@@ -206,8 +228,13 @@ export default function AddItemForm({
 
                         if (product) {
                             if (product.name) setName(product.name)
-                            if (product.category) setCategory(product.category)
-
+                            if (product.category) {
+                                const cleaned = cleanCategory(
+                                    product.category,
+                                    categories.map((c) => c.name),
+                                )
+                                if (cleaned) setCategory(cleaned)
+                            }
                             if (product.image)
                                 setImageUrlFromScan(product.image)
                         }
@@ -245,10 +272,8 @@ export default function AddItemForm({
                 style={{ display: 'block', marginBottom: 10 }}
             />
             <label>Category:</label>
-            <input
-                type="text"
+            <select
                 value={category}
-                placeholder="Optional (auto-filled if known)"
                 onChange={(e) => setCategory(e.target.value)}
                 style={{
                     display: 'block',
@@ -257,7 +282,56 @@ export default function AddItemForm({
                     width: '100%',
                     maxWidth: 300,
                 }}
-            />
+            >
+                <option value="">Select category...</option>
+                {categories.map((c) => (
+                    <option key={c.id} value={c.name}>
+                        {c.name}
+                    </option>
+                ))}
+            </select>
+            <div style={{ marginBottom: 10 }}>
+                <input
+                    type="text"
+                    placeholder="New category"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    style={{
+                        marginRight: 10,
+                        padding: 8,
+                        width: '70%',
+                        maxWidth: 250,
+                    }}
+                />
+                <button
+                    type="button"
+                    onClick={async () => {
+                        const trimmed = newCategoryName.trim()
+                        if (!trimmed) return alert('Enter category name')
+
+                        const { data, error } = await supabase
+                            .from('categories')
+                            .insert({ name: trimmed })
+                            .select()
+                            .single()
+
+                        if (error) {
+                            alert(error.message)
+                            return
+                        }
+
+                        // add to dropdown list
+                        setCategories((prev) => [...prev, data])
+
+                        // auto‑select it
+                        setCategory(data.name)
+
+                        setNewCategoryName('')
+                    }}
+                >
+                    Add
+                </button>
+            </div>
             {imagePreview && (
                 <div style={{ marginBottom: 10 }}>
                     <img
