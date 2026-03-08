@@ -1,6 +1,7 @@
-import './ItemCard.css'
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import './ItemCard.css'
+import Modal from './Modal'
 
 function isoToDisplay(iso) {
     if (!iso) return 'No date'
@@ -28,6 +29,8 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
     const [editingCategory, setEditingCategory] = useState(false)
     const [categories, setCategories] = useState([])
     const [newCategoryName, setNewCategoryName] = useState('')
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [pendingDeleteId, setPendingDeleteId] = useState(null)
     useEffect(() => {
         async function fetchCategories() {
             const { data } = await supabase
@@ -222,9 +225,10 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                                             </button>
 
                                             <button
-                                                onClick={() =>
-                                                    onDelete(unit.id)
-                                                }
+                                                onClick={() => {
+                                                    setPendingDeleteId(unit.id)
+                                                    setShowDeleteModal(true)
+                                                }}
                                             >
                                                 Delete
                                             </button>
@@ -236,6 +240,24 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                     </div>
                 )}
             </div>
+            {showDeleteModal && (
+                <Modal
+                    title="Delete Item?"
+                    onConfirm={() => {
+                        onDelete(pendingDeleteId)
+                        setShowDeleteModal(false)
+                        setPendingDeleteId(null)
+                    }}
+                    onCancel={() => {
+                        setShowDeleteModal(false)
+                        setPendingDeleteId(null)
+                    }}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                >
+                    This action cannot be undone.
+                </Modal>
+            )}
         </li>
     )
 }
