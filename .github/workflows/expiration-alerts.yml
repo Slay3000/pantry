@@ -22,7 +22,7 @@ jobs:
             - name: Run script
               run: node scripts/send-expiration-alerts.mjs
               env:
-                  SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+                  REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
                   SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
                   VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
                   VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
