@@ -4,6 +4,7 @@ import { uploadToImgBB } from '../utils/uploadToImgBB'
 import BarcodeScanner from './BarcodeScanner'
 import { lookupBarcode } from '../utils/barcodeLookup'
 import { cleanCategory } from '../utils/cleanCategory'
+import Modal from './Modal'
 
 async function findProductInDB(barcode) {
     const { data, error } = await supabase
@@ -35,6 +36,9 @@ export default function AddItemForm({
     const [category, setCategory] = useState('')
     const [categories, setCategories] = useState([])
     const [newCategoryName, setNewCategoryName] = useState('')
+    const [showSuccessModal, setShowSuccessModal] = useState(false)
+    const [addedName, setAddedName] = useState('')
+    const [location, setLocation] = useState('pantry')
     // Auto-fill using existing DB OR external API
     useEffect(() => {
         if (barcode.length < 8) return
@@ -142,6 +146,7 @@ export default function AddItemForm({
                 category: category || null,
                 delete_url: uploadResult?.deleteUrl || null,
                 image_id: uploadResult?.imageId || null,
+                location,
             }
 
             const { error } = await supabase
@@ -157,6 +162,8 @@ export default function AddItemForm({
 
         // Refresh parent list
         await onItemAdded()
+        setAddedName(name)
+        setShowSuccessModal(true)
 
         // Reset form completely
         setName('')
@@ -168,6 +175,7 @@ export default function AddItemForm({
         setCategory('')
         setImagePreview(null)
         setShowScanner(false)
+        setLocation('pantry')
 
         setLoading(false)
     }
@@ -178,7 +186,15 @@ export default function AddItemForm({
         setImagePreview(null)
         setCategory('')
         setImageUrlFromScan(null)
+        setLocation('pantry')
     }, [barcode])
+
+    useEffect(() => {
+        if (showSuccessModal) {
+            const t = setTimeout(() => setShowSuccessModal(false), 3000)
+            return () => clearTimeout(t)
+        }
+    }, [showSuccessModal])
     if (mode === 'remove') {
         return (
             <div style={{ marginBottom: 20 }}>
@@ -203,217 +219,244 @@ export default function AddItemForm({
     }
 
     return (
-        <form
-            onSubmit={handleSubmit}
-            style={{
-                marginBottom: 20,
-                padding: 20,
-                border: '1px solid #ccc',
-                borderRadius: 8,
-            }}
-        >
-            <h3>Add New Pantry Item</h3>
-
-            {/* Scanner modal */}
-            {showScanner && (
-                <BarcodeScanner
-                    onDetected={async (code) => {
-                        setBarcode(code)
-                        setShowScanner(false)
-                        if (mode === 'remove') {
-                            onRemoveBarcode(code) // call pantry function
-                            return
-                        }
-                        const product = await lookupBarcode(code)
-
-                        if (product) {
-                            if (product.name) setName(product.name)
-                            if (product.category) {
-                                const cleaned = cleanCategory(
-                                    product.category,
-                                    categories.map((c) => c.name),
-                                )
-                                if (cleaned) setCategory(cleaned)
-                            }
-                            if (product.image)
-                                setImageUrlFromScan(product.image)
-                        }
-                    }}
-                />
-            )}
-
-            <div style={{ marginBottom: 10 }}>
-                <button type="button" onClick={() => setShowScanner(true)}>
-                    Scan Barcode
-                </button>
-            </div>
-
-            <label>Barcode (manual entry allowed):</label>
-            <input
-                type="text"
-                value={barcode}
-                placeholder="Enter barcode manually"
-                onChange={(e) => setBarcode(e.target.value)}
+        <>
+            <form
+                onSubmit={handleSubmit}
                 style={{
-                    display: 'block',
-                    marginBottom: 10,
-                    padding: 8,
-                    width: '100%',
-                    maxWidth: 300,
-                }}
-            />
-
-            <label>Name:</label>
-            <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={{ display: 'block', marginBottom: 10 }}
-            />
-            <label>Category:</label>
-            <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                style={{
-                    display: 'block',
-                    marginBottom: 10,
-                    padding: 8,
-                    width: '100%',
-                    maxWidth: 300,
+                    marginBottom: 20,
+                    padding: 20,
+                    border: '1px solid #ccc',
+                    borderRadius: 8,
                 }}
             >
-                <option value="">Select category...</option>
-                {categories.map((c) => (
-                    <option key={c.id} value={c.name}>
-                        {c.name}
-                    </option>
-                ))}
-            </select>
-            <div style={{ marginBottom: 10 }}>
-                <input
-                    type="text"
-                    placeholder="New category"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    style={{
-                        marginRight: 10,
-                        padding: 8,
-                        width: '70%',
-                        maxWidth: 250,
-                    }}
-                />
-                <button
-                    type="button"
-                    onClick={async () => {
-                        const trimmed = newCategoryName.trim()
-                        if (!trimmed) return alert('Enter category name')
+                <h3>Add New Pantry Item</h3>
 
-                        const { data, error } = await supabase
-                            .from('categories')
-                            .insert({ name: trimmed })
-                            .select()
-                            .single()
+                {/* Scanner modal */}
+                {showScanner && (
+                    <BarcodeScanner
+                        onDetected={async (code) => {
+                            setBarcode(code)
+                            setShowScanner(false)
+                            if (mode === 'remove') {
+                                onRemoveBarcode(code) // call pantry function
+                                return
+                            }
+                            const product = await lookupBarcode(code)
 
-                        if (error) {
-                            alert(error.message)
-                            return
-                        }
-
-                        // add to dropdown list
-                        setCategories((prev) => [...prev, data])
-
-                        // auto‑select it
-                        setCategory(data.name)
-
-                        setNewCategoryName('')
-                    }}
-                >
-                    Add
-                </button>
-            </div>
-            {imagePreview && (
-                <div style={{ marginBottom: 10 }}>
-                    <img
-                        src={imagePreview}
-                        alt="Preview"
-                        style={{
-                            width: 150,
-                            height: 150,
-                            objectFit: 'cover',
-                            borderRadius: 8,
-                            marginBottom: 10,
-                            border: '1px solid #ccc',
+                            if (product) {
+                                if (product.name) setName(product.name)
+                                if (product.category) {
+                                    const cleaned = cleanCategory(
+                                        product.category,
+                                        categories.map((c) => c.name),
+                                    )
+                                    if (cleaned) setCategory(cleaned)
+                                }
+                                if (product.image)
+                                    setImageUrlFromScan(product.image)
+                            }
                         }}
                     />
-                    <br />
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setImage(null)
-                            setImagePreview(null)
-                            setImageUrlFromScan(null)
-                        }}
-                        style={{
-                            background: '#c00',
-                            color: 'white',
-                            padding: '5px 10px',
-                            borderRadius: 4,
-                            border: 'none',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Remove Image
+                )}
+
+                <div style={{ marginBottom: 10 }}>
+                    <button type="button" onClick={() => setShowScanner(true)}>
+                        Scan Barcode
                     </button>
                 </div>
-            )}
-            <label>Upload Image:</label>
-            <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                    const file = e.target.files[0]
-                    setImage(file)
 
-                    if (file) {
-                        const url = URL.createObjectURL(file)
-                        setImagePreview(url)
-                        setImageUrlFromScan(null) // remove scanned image
-                    }
-                }}
-                style={{
-                    display:
-                        imagePreview || imageUrlFromScan ? 'none' : 'block',
-                    marginBottom: 10,
-                }}
-            />
-
-            <label>How many units?</label>
-            <input
-                type="number"
-                min="1"
-                value={unitsCount}
-                onChange={(e) => handleUnitsCountChange(e.target.value)}
-                style={{ display: 'block', marginBottom: 10 }}
-            />
-
-            <h4>Expiration dates for each unit</h4>
-            {expirationDates.map((exp, index) => (
+                <label>Barcode (manual entry allowed):</label>
                 <input
-                    key={index}
-                    type="date"
-                    value={exp}
+                    type="text"
+                    value={barcode}
+                    placeholder="Enter barcode manually"
+                    onChange={(e) => setBarcode(e.target.value)}
+                    style={{
+                        display: 'block',
+                        marginBottom: 10,
+                        padding: 8,
+                        width: '100%',
+                        maxWidth: 300,
+                    }}
+                />
+
+                <label>Name:</label>
+                <input
+                    type="text"
                     required
-                    onChange={(e) =>
-                        handleExpirationChange(index, e.target.value)
-                    }
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     style={{ display: 'block', marginBottom: 10 }}
                 />
-            ))}
+                <label>Location:</label>
+                <select
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    style={{
+                        display: 'block',
+                        marginBottom: 10,
+                        padding: 8,
+                        width: '100%',
+                        maxWidth: 300,
+                    }}
+                >
+                    <option value="pantry">Pantry</option>
+                    <option value="fridge">Fridge</option>
+                    <option value="freezer">Freezer</option>
+                </select>
+                <label>Category:</label>
+                <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    style={{
+                        display: 'block',
+                        marginBottom: 10,
+                        padding: 8,
+                        width: '100%',
+                        maxWidth: 300,
+                    }}
+                >
+                    <option value="">Select category...</option>
+                    {categories.map((c) => (
+                        <option key={c.id} value={c.name}>
+                            {c.name}
+                        </option>
+                    ))}
+                </select>
+                <div style={{ marginBottom: 10 }}>
+                    <input
+                        type="text"
+                        placeholder="New category"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        style={{
+                            marginRight: 10,
+                            padding: 8,
+                            width: '70%',
+                            maxWidth: 250,
+                        }}
+                    />
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            const trimmed = newCategoryName.trim()
+                            if (!trimmed) return alert('Enter category name')
 
-            <button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Add Item'}
-            </button>
-        </form>
+                            const { data, error } = await supabase
+                                .from('categories')
+                                .insert({ name: trimmed })
+                                .select()
+                                .single()
+
+                            if (error) {
+                                alert(error.message)
+                                return
+                            }
+
+                            // add to dropdown list
+                            setCategories((prev) => [...prev, data])
+
+                            // auto‑select it
+                            setCategory(data.name)
+
+                            setNewCategoryName('')
+                        }}
+                    >
+                        Add
+                    </button>
+                </div>
+                {imagePreview && (
+                    <div style={{ marginBottom: 10 }}>
+                        <img
+                            src={imagePreview}
+                            alt="Preview"
+                            style={{
+                                width: 150,
+                                height: 150,
+                                objectFit: 'cover',
+                                borderRadius: 8,
+                                marginBottom: 10,
+                                border: '1px solid #ccc',
+                            }}
+                        />
+                        <br />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setImage(null)
+                                setImagePreview(null)
+                                setImageUrlFromScan(null)
+                            }}
+                            style={{
+                                background: '#c00',
+                                color: 'white',
+                                padding: '5px 10px',
+                                borderRadius: 4,
+                                border: 'none',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Remove Image
+                        </button>
+                    </div>
+                )}
+                <label>Upload Image:</label>
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                        const file = e.target.files[0]
+                        setImage(file)
+
+                        if (file) {
+                            const url = URL.createObjectURL(file)
+                            setImagePreview(url)
+                            setImageUrlFromScan(null) // remove scanned image
+                        }
+                    }}
+                    style={{
+                        display:
+                            imagePreview || imageUrlFromScan ? 'none' : 'block',
+                        marginBottom: 10,
+                    }}
+                />
+
+                <label>How many units?</label>
+                <input
+                    type="number"
+                    min="1"
+                    value={unitsCount}
+                    onChange={(e) => handleUnitsCountChange(e.target.value)}
+                    style={{ display: 'block', marginBottom: 10 }}
+                />
+
+                <h4>Expiration dates for each unit</h4>
+                {expirationDates.map((exp, index) => (
+                    <input
+                        key={index}
+                        type="date"
+                        value={exp}
+                        required
+                        onChange={(e) =>
+                            handleExpirationChange(index, e.target.value)
+                        }
+                        style={{ display: 'block', marginBottom: 10 }}
+                    />
+                ))}
+
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Saving...' : 'Add Item'}
+                </button>
+            </form>
+            {showSuccessModal && (
+                <Modal
+                    title="Success"
+                    onCancel={() => setShowSuccessModal(false)}
+                    cancelText="Close"
+                >
+                    Product <strong>{addedName}</strong> added!
+                </Modal>
+            )}
+        </>
     )
 }

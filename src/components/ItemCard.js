@@ -75,7 +75,21 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                 <div className="item-name">
                     {product.name || 'Unnamed item'}
                 </div>
-
+                <div className="item-location">
+                    <strong>Location:</strong>
+                    <select
+                        value={units[0].location}
+                        onChange={(e) =>
+                            units.forEach((u) =>
+                                onSave(u.id, { location: e.target.value }),
+                            )
+                        }
+                    >
+                        <option value="pantry">Pantry</option>
+                        <option value="fridge">Fridge</option>
+                        <option value="freezer">Freezer</option>
+                    </select>
+                </div>
                 <div className="item-category">
                     <strong>Category:</strong>
 

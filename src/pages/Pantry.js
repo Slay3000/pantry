@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import AddItemForm from '../components/AddItemForm'
 import ItemList from '../components/ItemList'
+import { subscribeToPush, isSubscribed } from '../utils/notifications'
 import './Pantry.css'
 
 export default function Pantry({ user }) {
@@ -10,7 +11,7 @@ export default function Pantry({ user }) {
     const [mode, setMode] = useState('add') // add | remove
     const [lastScanned, setLastScanned] = useState(null)
     const [activeTab, setActiveTab] = useState('actions') // actions | list
-
+    const [subscribed, setSubscribed] = useState(false)
     useEffect(() => {
         async function loadPantry() {
             const { data } = await supabase
@@ -39,6 +40,9 @@ export default function Pantry({ user }) {
     useEffect(() => {
         if (pantryId) loadItems()
     }, [pantryId])
+    useEffect(() => {
+        isSubscribed().then(setSubscribed)
+    }, [])
 
     async function logout() {
         await supabase.auth.signOut()
@@ -74,6 +78,11 @@ export default function Pantry({ user }) {
         <div className="pantry-container">
             <div className="pantry-header">
                 <h1>My Pantry</h1>
+                {!subscribed && (
+                    <button onClick={() => subscribeToPush(user)}>
+                        Enable Notifications
+                    </button>
+                )}
                 <button onClick={logout} className="logout-btn">
                     Logout
                 </button>

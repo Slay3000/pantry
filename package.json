@@ -12,11 +12,13 @@
         "@zxing/browser": "^0.1.5",
         "dayjs": "^1.11.19",
         "install": "^0.13.0",
+        "node-fetch": "^3.3.2",
         "npm": "^11.10.1",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "react-router-dom": "^7.13.1",
         "react-scripts": "5.0.1",
+        "web-push": "^3.6.7",
         "web-vitals": "^2.1.4"
     },
     "scripts": {
