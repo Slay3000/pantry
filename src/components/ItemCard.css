@@ -1,47 +1,178 @@
-/* Category */
-.item-category {
-    font-size: 14px;
-    opacity: 0.8;
-    margin-bottom: 4px;
+/* ------------------------------------------
+   EXPIRATION COLORS
+-------------------------------------------*/
+.expired {
+    border-left: 6px solid #ff4d4f;
+    background: #fff1f0;
 }
 
-/* Collapsible title */
-.collapsible {
+.one-month {
+    border-left: 6px solid #fa8c16;
+    background: #fff7e6;
+}
+
+.two-month {
+    border-left: 6px solid #fadb14;
+    background: #fffbe6;
+}
+
+/* ------------------------------------------
+   CARD
+-------------------------------------------*/
+.item-card {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    padding: 14px;
+    margin: 14px 0;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+/* ------------------------------------------
+   IMAGE
+-------------------------------------------*/
+.item-image {
+    width: 110px;
+    height: 110px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+/* ------------------------------------------
+   INFO COLUMN
+-------------------------------------------*/
+.item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* PRODUCT NAME — 2 LINES MAX */
+.item-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
+/* ------------------------------------------
+   LOCATION ROW
+-------------------------------------------*/
+.item-location {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-location select {
+    padding: 6px 10px;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
     cursor: pointer;
-    margin-top: 8px;
-    font-weight: bold;
+    min-width: 110px;
 }
 
-/* Highlighting */
+/* ------------------------------------------
+   CATEGORY ROW
+-------------------------------------------*/
+.item-category {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category-left {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* ------------------------------------------
+   EXPIRATION ROW
+-------------------------------------------*/
 .exp-row {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+    padding: 10px;
+    border-radius: 6px;
+    gap: 12px;
+    overflow: hidden;
+    min-height: 44px;
+}
+
+.exp-row span {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.exp-row-actions {
+    display: flex;
     gap: 8px;
-    padding: 6px 0;
 }
 
-.exp-row.expired {
-    color: #ff4e4e;
-    font-weight: bold;
+/* ------------------------------------------
+   ICON BUTTONS
+-------------------------------------------*/
+.btn {
+    border: none;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 1.2rem;
 }
 
-.exp-row.soon {
-    color: #ff9d00;
-    font-weight: bold;
+.btn-edit {
+    background: #1677ff;
+    color: white;
 }
 
-.exp-row.week {
-    color: #ffd000;
+.btn-delete {
+    background: #ff4d4f;
+    color: white;
 }
 
-.exp-row.fresh {
-    color: #00d17a;
-}
+/* ------------------------------------------
+   MOBILE LAYOUT — IMAGE ABOVE, TEXT FULL WIDTH
+-------------------------------------------*/
+@media (max-width: 600px) {
+    .item-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-.item-image {
-    width: 120px;
-    height: 120px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    display: block;
+    .item-image {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 220px;
+        object-fit: contain;
+        margin-bottom: 10px;
+    }
+
+    .item-info {
+        width: 100%;
+    }
+
+    .exp-row {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .btn-edit,
+    .btn-delete {
+        padding: 6px 8px;
+        font-size: 1.3rem;
+    }
 }

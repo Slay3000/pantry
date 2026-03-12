@@ -1,0 +1,186 @@
+/* ----------------------------------------------------------
+   CLEAN MODERN FULL-WIDTH FORM
+-----------------------------------------------------------*/
+
+.add-form {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    max-width: 550px; /* prevent overly wide fields */
+    margin: 0 auto; /* center on desktop */
+}
+
+/* HEADINGS */
+.add-form h3,
+.add-form h4 {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+/* LABEL */
+.add-form label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+}
+
+/* ----------------------------------------------------------
+   INPUTS & SELECTS
+----------------------------------------------------------- */
+
+.add-form input,
+.add-form select {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: #fafafa;
+    outline: none;
+    box-sizing: border-box;
+}
+
+/* Focus styling */
+.add-form input:focus,
+.add-form select:focus {
+    border-color: #1677ff;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+}
+
+/* Prevent long text inside <select> from breaking layout */
+.add-form select {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* New category + Add button row */
+.add-form .new-cat-row {
+    display: flex;
+    gap: 8px;
+}
+
+.new-cat-row input {
+    flex: 1;
+}
+
+.new-cat-row button {
+    flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------
+   IMAGE PREVIEW
+----------------------------------------------------------- */
+
+.image-preview {
+    width: 150px;
+    height: 150px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid #ccc;
+}
+
+/* ----------------------------------------------------------
+   SUBMIT BUTTON
+----------------------------------------------------------- */
+
+.add-form button[type='submit'],
+.add-form .primary-btn {
+    background: #4caf50;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.add-form button[type='submit']:hover {
+    background: #3d8b41;
+}
+
+/* ----------------------------------------------------------
+   MOBILE FIXES
+----------------------------------------------------------- */
+
+@media (max-width: 600px) {
+    .add-form {
+        padding: 16px;
+        max-width: 100%;
+    }
+
+    .new-cat-row {
+        flex-direction: column;
+    }
+
+    .new-cat-row button {
+        width: 100%;
+    }
+
+    /* Prevent overflow in selects */
+    .add-form select {
+        font-size: 1rem;
+        padding: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+/* ----------------------------------------------------------
+   ACTION BUTTONS (Scan barcode + Add category)
+----------------------------------------------------------- */
+
+.action-btn {
+    background: #1677ff;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.action-btn:hover {
+    background: #0f5ec0;
+}
+
+.action-btn:active {
+    transform: scale(0.96);
+}
+
+/* ADD CATEGORY (plus icon) */
+.btn-add-cat {
+    background: #4caf50;
+}
+
+.btn-add-cat:hover {
+    background: #3d8b41;
+}
+
+/* full-width for mobile */
+@media (max-width: 600px) {
+    .action-btn,
+    .btn-add-cat {
+        width: 100%;
+        justify-content: center;
+        font-size: 1rem;
+        padding: 12px;
+    }
+}

@@ -79,8 +79,11 @@ export default function Pantry({ user }) {
             <div className="pantry-header">
                 <h1>My Pantry</h1>
                 {!subscribed && (
-                    <button onClick={() => subscribeToPush(user)}>
-                        Enable Notifications
+                    <button
+                        className="enable-notify-btn"
+                        onClick={() => subscribeToPush(user)}
+                    >
+                        🔔
                     </button>
                 )}
                 <button onClick={logout} className="logout-btn">

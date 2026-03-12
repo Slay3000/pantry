@@ -90,37 +90,6 @@
     color: white;
 }
 
-/* ITEM CARDS ---------------------------------------------------------- */
-
-.item-card {
-    background: #ffffff;
-    padding: 14px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    display: flex;
-    gap: 16px;
-}
-
-.item-image {
-    width: 96px;
-    height: 96px;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #eee;
-}
-
-.item-image.placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #777;
-}
-
-.item-info {
-    flex: 1;
-}
-
 /* TEXT ---------------------------------------------------------------- */
 
 .item-name {
@@ -155,28 +124,46 @@
     margin-top: 8px;
 }
 
-.exp-row {
-    display: flex;
-    gap: 8px;
-    padding: 6px 0;
+.tab-section ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
 }
 
-/* EXPIRATION COLORS ---------------------------------------------------- */
-
-.exp-row.expired span {
-    color: #c62828 !important;
-    font-weight: bold;
+.pantry-items > ul,
+.pantry-section > ul,
+ul.item-list {
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
-.exp-row.soon span {
-    color: #ef6c00 !important;
-    font-weight: bold;
+/* ENABLE NOTIFICATIONS BUTTON ------------------------------------ */
+
+.enable-notify-btn {
+    background: #1677ff;
+    color: white;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        transform 0.1s;
+    margin: 10px 0;
 }
 
-.exp-row.week span {
-    color: #fbc02d !important;
+.enable-notify-btn:hover {
+    background: #0f5ec0;
 }
 
-.exp-row.fresh span {
-    color: #2e7d32 !important;
+.enable-notify-btn:active {
+    transform: scale(0.96);
+}
+
+.enable-notify-btn.disabled {
+    background: #ccc;
+    cursor: default;
+    transform: none;
 }

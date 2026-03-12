@@ -5,6 +5,7 @@ import BarcodeScanner from './BarcodeScanner'
 import { lookupBarcode } from '../utils/barcodeLookup'
 import { cleanCategory } from '../utils/cleanCategory'
 import Modal from './Modal'
+import './AddItemForm.css'
 
 async function findProductInDB(barcode) {
     const { data, error } = await supabase
@@ -106,16 +107,27 @@ export default function AddItemForm({
 
         const newExp = [...expirationDates]
 
-        while (newExp.length < count) newExp.push('')
+        while (newExp.length < count) {
+            // Auto-fill new fields with first date if available
+            newExp.push(newExp[0] || '')
+        }
         while (newExp.length > count) newExp.pop()
 
         setExpirationDates(newExp)
     }
 
-    // Update expiration date
     function handleExpirationChange(index, value) {
         const updated = [...expirationDates]
         updated[index] = value
+
+        // UX improvement:
+        // If the FIRST date is changed → fill all empty dates with same value
+        if (index === 0 && value) {
+            updated.forEach((d, i) => {
+                if (i !== 0 && !d) updated[i] = value
+            })
+        }
+
         setExpirationDates(updated)
     }
 
@@ -197,7 +209,7 @@ export default function AddItemForm({
     }, [showSuccessModal])
     if (mode === 'remove') {
         return (
-            <div style={{ marginBottom: 20 }}>
+            <div>
                 <h3>Remove Product</h3>
 
                 {showScanner && (
@@ -209,7 +221,11 @@ export default function AddItemForm({
                     />
                 )}
 
-                <button type="button" onClick={() => setShowScanner(true)}>
+                <button
+                    type="button"
+                    className="action-btn"
+                    onClick={() => setShowScanner(true)}
+                >
                     Scan Barcode to Remove
                 </button>
 
@@ -220,15 +236,7 @@ export default function AddItemForm({
 
     return (
         <>
-            <form
-                onSubmit={handleSubmit}
-                style={{
-                    marginBottom: 20,
-                    padding: 20,
-                    border: '1px solid #ccc',
-                    borderRadius: 8,
-                }}
-            >
+            <form className="add-form" onSubmit={handleSubmit}>
                 <h3>Add New Pantry Item</h3>
 
                 {/* Scanner modal */}
@@ -259,8 +267,12 @@ export default function AddItemForm({
                     />
                 )}
 
-                <div style={{ marginBottom: 10 }}>
-                    <button type="button" onClick={() => setShowScanner(true)}>
+                <div>
+                    <button
+                        type="button"
+                        className="action-btn"
+                        onClick={() => setShowScanner(true)}
+                    >
                         Scan Barcode
                     </button>
                 </div>
@@ -271,13 +283,6 @@ export default function AddItemForm({
                     value={barcode}
                     placeholder="Enter barcode manually"
                     onChange={(e) => setBarcode(e.target.value)}
-                    style={{
-                        display: 'block',
-                        marginBottom: 10,
-                        padding: 8,
-                        width: '100%',
-                        maxWidth: 300,
-                    }}
                 />
 
                 <label>Name:</label>
@@ -286,19 +291,11 @@ export default function AddItemForm({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    style={{ display: 'block', marginBottom: 10 }}
                 />
                 <label>Location:</label>
                 <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    style={{
-                        display: 'block',
-                        marginBottom: 10,
-                        padding: 8,
-                        width: '100%',
-                        maxWidth: 300,
-                    }}
                 >
                     <option value="pantry">Pantry</option>
                     <option value="fridge">Fridge</option>
@@ -308,13 +305,6 @@ export default function AddItemForm({
                 <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    style={{
-                        display: 'block',
-                        marginBottom: 10,
-                        padding: 8,
-                        width: '100%',
-                        maxWidth: 300,
-                    }}
                 >
                     <option value="">Select category...</option>
                     {categories.map((c) => (
@@ -323,21 +313,16 @@ export default function AddItemForm({
                         </option>
                     ))}
                 </select>
-                <div style={{ marginBottom: 10 }}>
+                <div>
                     <input
                         type="text"
                         placeholder="New category"
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
-                        style={{
-                            marginRight: 10,
-                            padding: 8,
-                            width: '70%',
-                            maxWidth: 250,
-                        }}
                     />
                     <button
                         type="button"
+                        className="action-btn"
                         onClick={async () => {
                             const trimmed = newCategoryName.trim()
                             if (!trimmed) return alert('Enter category name')
@@ -366,34 +351,16 @@ export default function AddItemForm({
                     </button>
                 </div>
                 {imagePreview && (
-                    <div style={{ marginBottom: 10 }}>
-                        <img
-                            src={imagePreview}
-                            alt="Preview"
-                            style={{
-                                width: 150,
-                                height: 150,
-                                objectFit: 'cover',
-                                borderRadius: 8,
-                                marginBottom: 10,
-                                border: '1px solid #ccc',
-                            }}
-                        />
+                    <div>
+                        <img src={imagePreview} alt="Preview" />
                         <br />
                         <button
                             type="button"
+                            className="action-btn"
                             onClick={() => {
                                 setImage(null)
                                 setImagePreview(null)
                                 setImageUrlFromScan(null)
-                            }}
-                            style={{
-                                background: '#c00',
-                                color: 'white',
-                                padding: '5px 10px',
-                                borderRadius: 4,
-                                border: 'none',
-                                cursor: 'pointer',
                             }}
                         >
                             Remove Image
@@ -414,11 +381,6 @@ export default function AddItemForm({
                             setImageUrlFromScan(null) // remove scanned image
                         }
                     }}
-                    style={{
-                        display:
-                            imagePreview || imageUrlFromScan ? 'none' : 'block',
-                        marginBottom: 10,
-                    }}
                 />
 
                 <label>How many units?</label>
@@ -427,7 +389,6 @@ export default function AddItemForm({
                     min="1"
                     value={unitsCount}
                     onChange={(e) => handleUnitsCountChange(e.target.value)}
-                    style={{ display: 'block', marginBottom: 10 }}
                 />
 
                 <h4>Expiration dates for each unit</h4>
@@ -440,7 +401,6 @@ export default function AddItemForm({
                         onChange={(e) =>
                             handleExpirationChange(index, e.target.value)
                         }
-                        style={{ display: 'block', marginBottom: 10 }}
                     />
                 ))}
 

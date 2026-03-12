@@ -1,0 +1,14 @@
+.expired {
+    border: 2px solid #ff4d4f;
+    background-color: #ffe6e6;
+}
+
+.one-month {
+    border: 2px solid #fa8c16;
+    background-color: #fff2e8;
+}
+
+.two-month {
+    border: 2px solid #fadb14;
+    background-color: #fffbe6;
+}

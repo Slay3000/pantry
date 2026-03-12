@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
-import './ItemCard.css'
+import { getExpirationColor } from '../utils/expirationColor'
 import Modal from './Modal'
+import './ItemCard.css'
+import '../styles/expiration.css'
 
 function isoToDisplay(iso) {
     if (!iso) return 'No date'
@@ -59,8 +61,18 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
         cancelEdit()
     }
 
+    const expirationDates = units
+        .map((u) => u.expiration_date)
+        .filter(Boolean)
+        .sort((a, b) => new Date(a) - new Date(b))
+
+    const nearestExpiration = expirationDates[0] || null
+
     return (
-        <li className="item-card grouped">
+        <li
+            className={`item-card grouped ${getExpirationColor(nearestExpiration)}`}
+        >
+            {' '}
             {product.image_url ? (
                 <img
                     src={product.image_url}
@@ -70,7 +82,6 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
             ) : (
                 <div className="item-image placeholder">No Image</div>
             )}
-
             <div className="item-info">
                 <div className="item-name">
                     {product.name || 'Unnamed item'}
@@ -99,10 +110,11 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                                 {product.category || 'None'}
                             </span>
                             <button
+                                className="btn btn-edit"
                                 onClick={() => setEditingCategory(true)}
                                 style={{ marginLeft: 12 }}
                             >
-                                Edit
+                                ✏️
                             </button>
                         </>
                     ) : (
@@ -164,15 +176,15 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                                         setEditingCategory(false)
                                     }}
                                 >
-                                    Add
+                                    ➕
                                 </button>
                             </div>
 
                             <button
+                                className="btn btn-edit"
                                 onClick={() => setEditingCategory(false)}
-                                style={{ marginTop: 4 }}
                             >
-                                Done
+                                ✔
                             </button>
                         </div>
                     )}
@@ -208,19 +220,22 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                                                     )
                                                 }
                                             />
-                                            <button onClick={saveUnit}>
-                                                Save
-                                            </button>
-                                            <button onClick={cancelEdit}>
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    onDelete(unit.id)
-                                                }
-                                            >
-                                                Delete
-                                            </button>
+
+                                            <div className="exp-row-actions">
+                                                <button onClick={saveUnit}>
+                                                    💾
+                                                </button>
+                                                <button onClick={cancelEdit}>
+                                                    ❌
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        onDelete(unit.id)
+                                                    }
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </>
                                     ) : (
                                         <>
@@ -230,22 +245,25 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                                                 )}
                                             </span>
 
-                                            <button
-                                                onClick={() =>
-                                                    startEditUnit(unit)
-                                                }
-                                            >
-                                                Edit
-                                            </button>
-
-                                            <button
-                                                onClick={() => {
-                                                    setPendingDeleteId(unit.id)
-                                                    setShowDeleteModal(true)
-                                                }}
-                                            >
-                                                Delete
-                                            </button>
+                                            <div className="exp-row-actions">
+                                                <button
+                                                    onClick={() =>
+                                                        startEditUnit(unit)
+                                                    }
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setPendingDeleteId(
+                                                            unit.id,
+                                                        )
+                                                        setShowDeleteModal(true)
+                                                    }}
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </>
                                     )}
                                 </div>
