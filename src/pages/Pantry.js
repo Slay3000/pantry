@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient'
 import AddItemForm from '../components/AddItemForm'
 import ItemList from '../components/ItemList'
 import ShoppingList from '../components/ShoppingList'
-import { subscribeToPush, isSubscribed } from '../utils/notifications'
+import NotificationCenter from '../components/NotificationCenter'
 import './Pantry.css'
 
 export default function Pantry({ user }) {
@@ -12,7 +12,6 @@ export default function Pantry({ user }) {
     const [mode, setMode] = useState('add')
     const [lastScanned, setLastScanned] = useState(null)
     const [activeTab, setActiveTab] = useState('actions')
-    const [subscribed, setSubscribed] = useState(false)
     useEffect(() => {
         async function loadPantry() {
             const { data } = await supabase
@@ -41,9 +40,6 @@ export default function Pantry({ user }) {
     useEffect(() => {
         if (pantryId) loadItems()
     }, [pantryId])
-    useEffect(() => {
-        isSubscribed().then(setSubscribed)
-    }, [])
 
     async function logout() {
         await supabase.auth.signOut()
@@ -92,14 +88,7 @@ export default function Pantry({ user }) {
         <div className="pantry-container">
             <div className="pantry-header">
                 <h1>My Pantry</h1>
-                {!subscribed && (
-                    <button
-                        className="enable-notify-btn"
-                        onClick={() => subscribeToPush(user)}
-                    >
-                        🔔
-                    </button>
-                )}
+                <NotificationCenter user={user} />
                 <button onClick={logout} className="logout-btn">
                     Logout
                 </button>

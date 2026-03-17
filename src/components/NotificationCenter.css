@@ -1,0 +1,122 @@
+.notification-center {
+    position: relative;
+    display: inline-block;
+}
+
+.bell-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    position: relative;
+    padding: 5px;
+}
+
+.badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: red;
+    color: white;
+    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.notification-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 300px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+@media (max-width: 600px) {
+    .notification-dropdown {
+        /* Adjust positioning to stay on screen and fit better */
+        right: -60px;
+        width: 300px;
+        max-width: 85vw;
+        max-height: 60vh;
+    }
+}
+
+.notif-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item p {
+    margin: 4px 0;
+    font-size: 0.9rem;
+    white-space: pre-wrap; /* Allows line breaks in message */
+    word-break: break-word;
+}
+
+.notif-item .time {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.empty-msg {
+    padding: 20px;
+    color: #888;
+    text-align: center;
+}
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast-item {
+    background-color: #333;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: toast-in 0.5s ease-out forwards;
+    width: 300px;
+    max-width: 80vw;
+}
+
+.toast-item p {
+    margin: 5px 0 0;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+}
+
+@keyframes toast-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
