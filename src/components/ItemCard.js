@@ -24,7 +24,13 @@ function getStatus(iso) {
     return 'fresh' // 🟢
 }
 
-export default function ItemCard({ product, units, onSave, onDelete }) {
+export default function ItemCard({
+    product,
+    units,
+    onSave,
+    onDelete,
+    onAddToShoppingList,
+}) {
     const [editingUnitId, setEditingUnitId] = useState(null)
     const [editingExpiration, setEditingExpiration] = useState(null)
     const [open, setOpen] = useState(true)
@@ -278,6 +284,15 @@ export default function ItemCard({ product, units, onSave, onDelete }) {
                     onConfirm={() => {
                         onDelete(pendingDeleteId)
                         setShowDeleteModal(false)
+                        if (units.length === 1) {
+                            if (
+                                window.confirm(
+                                    `Add "${product.name}" to your shopping list?`,
+                                )
+                            ) {
+                                onAddToShoppingList(product.name)
+                            }
+                        }
                         setPendingDeleteId(null)
                     }}
                     onCancel={() => {

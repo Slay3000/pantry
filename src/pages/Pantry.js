@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import AddItemForm from '../components/AddItemForm'
 import ItemList from '../components/ItemList'
+import ShoppingList from '../components/ShoppingList'
 import { subscribeToPush, isSubscribed } from '../utils/notifications'
 import './Pantry.css'
 
 export default function Pantry({ user }) {
     const [pantryId, setPantryId] = useState(null)
     const [items, setItems] = useState([])
-    const [mode, setMode] = useState('add') // add | remove
+    const [mode, setMode] = useState('add')
     const [lastScanned, setLastScanned] = useState(null)
-    const [activeTab, setActiveTab] = useState('actions') // actions | list
+    const [activeTab, setActiveTab] = useState('actions')
     const [subscribed, setSubscribed] = useState(false)
     useEffect(() => {
         async function loadPantry() {
@@ -74,6 +75,19 @@ export default function Pantry({ user }) {
         loadItems()
     }
 
+    async function handleAddToShoppingList(itemName) {
+        if (!itemName.trim() || !pantryId) return
+
+        const { error } = await supabase
+            .from('shopping_list')
+            .insert([{ name: itemName.trim(), pantry_id: pantryId }])
+
+        if (error) {
+            alert(error.message)
+        }
+        // You could add a success notification here
+    }
+
     return (
         <div className="pantry-container">
             <div className="pantry-header">
@@ -103,6 +117,12 @@ export default function Pantry({ user }) {
                     onClick={() => setActiveTab('list')}
                 >
                     Pantry List
+                </button>
+                <button
+                    className={activeTab === 'shopping' ? 'active' : ''}
+                    onClick={() => setActiveTab('shopping')}
+                >
+                    Shopping List
                 </button>
             </div>
 
@@ -148,7 +168,14 @@ export default function Pantry({ user }) {
                         mode={mode}
                         onSave={handleUpdateItem}
                         onDelete={handleDeleteItem}
+                        onAddToShoppingList={handleAddToShoppingList}
                     />
+                </div>
+            )}
+
+            {activeTab === 'shopping' && (
+                <div className="tab-section">
+                    <ShoppingList pantryId={pantryId} />
                 </div>
             )}
         </div>

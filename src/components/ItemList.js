@@ -1,7 +1,12 @@
 import ItemCard from './ItemCard'
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
-export default function ItemList({ items, onSave, onDelete }) {
+export default function ItemList({
+    items,
+    onSave,
+    onDelete,
+    onAddToShoppingList,
+}) {
     // Group items by product using barcode or name fallback
     const [categories, setCategories] = useState([])
 
@@ -50,6 +55,7 @@ export default function ItemList({ items, onSave, onDelete }) {
                     units={units}
                     onSave={onSave}
                     onDelete={onDelete}
+                    onAddToShoppingList={onAddToShoppingList}
                 />
             ))}
         </ul>
