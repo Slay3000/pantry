@@ -12,6 +12,7 @@ export default function Pantry({ user }) {
     const [mode, setMode] = useState('add')
     const [lastScanned, setLastScanned] = useState(null)
     const [activeTab, setActiveTab] = useState('actions')
+    const [searchTerm, setSearchTerm] = useState('')
     useEffect(() => {
         async function loadPantry() {
             const { data } = await supabase
@@ -84,6 +85,10 @@ export default function Pantry({ user }) {
         // You could add a success notification here
     }
 
+    const filteredItems = items.filter((item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+
     return (
         <div className="pantry-container">
             <div className="pantry-header">
@@ -152,8 +157,21 @@ export default function Pantry({ user }) {
             {activeTab === 'list' && (
                 <div className="tab-section">
                     <h2>Pantry Items</h2>
+                    <input
+                        type="text"
+                        placeholder="Search items..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '10px',
+                            marginBottom: '15px',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                        }}
+                    />
                     <ItemList
-                        items={items}
+                        items={filteredItems}
                         mode={mode}
                         onSave={handleUpdateItem}
                         onDelete={handleDeleteItem}

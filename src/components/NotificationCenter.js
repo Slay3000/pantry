@@ -93,6 +93,21 @@ export default function NotificationCenter({ user }) {
             .eq('is_read', false)
     }
 
+    async function deleteNotification(id) {
+        const notifToRemove = notifications.find((n) => n.id === id)
+        setNotifications((prev) => prev.filter((n) => n.id !== id))
+        if (notifToRemove && !notifToRemove.is_read) {
+            setUnreadCount((prev) => Math.max(0, prev - 1))
+        }
+
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', id)
+
+        if (error) console.error('Error deleting notification:', error)
+    }
+
     return (
         <>
             <div className="toast-container">
@@ -123,7 +138,11 @@ export default function NotificationCenter({ user }) {
                             <p className="empty-msg">No notifications</p>
                         ) : (
                             notifications.map((n) => (
-                                <div key={n.id} className="notif-item">
+                                <div
+                                    key={n.id}
+                                    className="notif-item"
+                                    onClick={() => deleteNotification(n.id)}
+                                >
                                     <strong>{n.title}</strong>
                                     <p>{n.body}</p>
                                     <span className="time">

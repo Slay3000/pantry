@@ -43,12 +43,19 @@
 }
 
 @media (max-width: 600px) {
+    /* Allow dropdown to position relative to the wider page/header, not the button */
+    .notification-center {
+        position: static;
+    }
     .notification-dropdown {
-        /* Adjust positioning to stay on screen and fit better */
-        right: -60px;
-        width: 300px;
-        max-width: 85vw;
+        position: absolute;
+        top: 80px; /* Offset from top of the header */
+        left: 50%;
+        transform: translateX(-50%); /* Center horizontally */
+        width: 90vw;
+        max-width: 400px;
         max-height: 60vh;
+        right: auto;
     }
 }
 
@@ -59,6 +66,11 @@
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: break-word;
+    cursor: pointer;
+}
+
+.notif-item:hover {
+    background-color: #f5f5f5;
 }
 
 .notif-item:last-child {
@@ -118,5 +130,15 @@
     to {
         transform: translateX(0);
         opacity: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .toast-container {
+        top: 10px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: 90vw;
     }
 }

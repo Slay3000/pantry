@@ -39,6 +39,8 @@ export default function ItemCard({
     const [newCategoryName, setNewCategoryName] = useState('')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [pendingDeleteId, setPendingDeleteId] = useState(null)
+    const [editingName, setEditingName] = useState(false)
+    const [newName, setNewName] = useState('')
     useEffect(() => {
         async function fetchCategories() {
             const { data } = await supabase
@@ -90,7 +92,52 @@ export default function ItemCard({
             )}
             <div className="item-info">
                 <div className="item-name">
-                    {product.name || 'Unnamed item'}
+                    {!editingName ? (
+                        <>
+                            {product.name || 'Unnamed item'}
+                            <button
+                                className="btn btn-edit"
+                                onClick={() => {
+                                    setNewName(product.name || '')
+                                    setEditingName(true)
+                                }}
+                                style={{ marginLeft: 8 }}
+                            >
+                                ✏️
+                            </button>
+                        </>
+                    ) : (
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                            }}
+                        >
+                            <input
+                                type="text"
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                style={{ fontSize: '1rem', padding: '4px' }}
+                            />
+                            <button
+                                onClick={() => {
+                                    const trimmed = newName.trim()
+                                    if (trimmed) {
+                                        units.forEach((u) =>
+                                            onSave(u.id, { name: trimmed }),
+                                        )
+                                        setEditingName(false)
+                                    }
+                                }}
+                            >
+                                💾
+                            </button>
+                            <button onClick={() => setEditingName(false)}>
+                                ❌
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <div className="item-location">
                     <strong>Location:</strong>
