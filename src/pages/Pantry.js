@@ -157,19 +157,26 @@ export default function Pantry({ user }) {
             {activeTab === 'list' && (
                 <div className="tab-section">
                     <h2>Pantry Items</h2>
-                    <input
-                        type="text"
-                        placeholder="Search items..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                    <div
                         style={{
-                            width: '100%',
-                            padding: '10px',
+                            display: 'flex',
+                            gap: '10px',
                             marginBottom: '15px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
                         }}
-                    />
+                    >
+                        <input
+                            type="text"
+                            placeholder="Search items..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{
+                                flexGrow: 1,
+                                padding: '10px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                            }}
+                        />
+                    </div>
                     <ItemList
                         items={filteredItems}
                         mode={mode}

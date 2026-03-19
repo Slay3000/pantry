@@ -31,9 +31,9 @@ export default function ItemCard({
     onDelete,
     onAddToShoppingList,
 }) {
+    const [showDetails, setShowDetails] = useState(false)
     const [editingUnitId, setEditingUnitId] = useState(null)
     const [editingExpiration, setEditingExpiration] = useState(null)
-    const [open, setOpen] = useState(true)
     const [editingCategory, setEditingCategory] = useState(false)
     const [categories, setCategories] = useState([])
     const [newCategoryName, setNewCategoryName] = useState('')
@@ -79,252 +79,397 @@ export default function ItemCard({
     return (
         <li
             className={`item-card grouped ${getExpirationColor(nearestExpiration)}`}
+            onClick={() => setShowDetails(true)}
+            style={{
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: '15px',
+                padding: '10px',
+                background: '#fff',
+            }}
         >
-            {' '}
             {product.image_url ? (
                 <img
                     src={product.image_url}
                     alt={product.name}
                     className="item-image"
+                    style={{
+                        width: '60px',
+                        height: '60px',
+                        objectFit: 'cover',
+                        borderRadius: '4px',
+                        flexShrink: 0,
+                    }}
                 />
             ) : (
-                <div className="item-image placeholder">No Image</div>
+                <div
+                    className="item-image placeholder"
+                    style={{
+                        width: '60px',
+                        height: '60px',
+                        fontSize: '0.7rem',
+                        flexShrink: 0,
+                    }}
+                >
+                    No Image
+                </div>
             )}
-            <div className="item-info">
-                <div className="item-name">
-                    {!editingName ? (
-                        <>
-                            {product.name || 'Unnamed item'}
-                            <button
-                                className="btn btn-edit"
-                                onClick={() => {
-                                    setNewName(product.name || '')
-                                    setEditingName(true)
-                                }}
-                                style={{ marginLeft: 8 }}
-                            >
-                                ✏️
-                            </button>
-                        </>
-                    ) : (
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                            }}
-                        >
-                            <input
-                                type="text"
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                style={{ fontSize: '1rem', padding: '4px' }}
-                            />
-                            <button
-                                onClick={() => {
-                                    const trimmed = newName.trim()
-                                    if (trimmed) {
-                                        units.forEach((u) =>
-                                            onSave(u.id, { name: trimmed }),
-                                        )
-                                        setEditingName(false)
-                                    }
-                                }}
-                            >
-                                💾
-                            </button>
-                            <button onClick={() => setEditingName(false)}>
-                                ❌
-                            </button>
-                        </div>
-                    )}
+
+            <div className="item-info" style={{ flexGrow: 1, minWidth: 0 }}>
+                <div
+                    className="item-name"
+                    style={{
+                        marginBottom: '4px',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                    }}
+                >
+                    {product.name || 'Unnamed item'}
                 </div>
-                <div className="item-location">
-                    <strong>Location:</strong>
-                    <select
-                        value={units[0].location}
-                        onChange={(e) =>
-                            units.forEach((u) =>
-                                onSave(u.id, { location: e.target.value }),
-                            )
-                        }
+                <div
+                    className="item-desc"
+                    style={{ fontSize: '0.9rem', color: '#555' }}
+                >
+                    {units.length} unit{units.length !== 1 && 's'} •{' '}
+                    {product.category || 'No category'}
+                    {units[0]?.location && ` • ${units[0].location}`}
+                </div>
+            </div>
+
+            {showDetails && (
+                <Modal
+                    title={product.name}
+                    onCancel={(e) => {
+                        if (e) e.stopPropagation()
+                        setShowDetails(false)
+                    }}
+                    cancelText="Close"
+                >
+                    <div
+                        className="item-details-view"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <option value="pantry">Pantry</option>
-                        <option value="fridge">Fridge</option>
-                        <option value="freezer">Freezer</option>
-                    </select>
-                </div>
-                <div className="item-category">
-                    <strong>Category:</strong>
-
-                    {!editingCategory ? (
-                        <>
-                            <span style={{ marginLeft: 6 }}>
-                                {product.category || 'None'}
-                            </span>
-                            <button
-                                className="btn btn-edit"
-                                onClick={() => setEditingCategory(true)}
-                                style={{ marginLeft: 12 }}
-                            >
-                                ✏️
-                            </button>
-                        </>
-                    ) : (
-                        <div style={{ marginTop: 6 }}>
-                            <select
-                                value={product.category || ''}
-                                onChange={(e) => {
-                                    units.forEach((unit) => {
-                                        onSave(unit.id, {
-                                            category: e.target.value,
-                                        })
-                                    })
-                                    setEditingCategory(false)
+                        {product.image_url && (
+                            <div
+                                style={{
+                                    textAlign: 'center',
+                                    marginBottom: '15px',
                                 }}
-                                style={{ marginBottom: 8, padding: 6 }}
                             >
-                                <option value="">Select category…</option>
-                                {categories.map((c) => (
-                                    <option key={c.id} value={c.name}>
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <div style={{ marginBottom: 8 }}>
-                                <input
-                                    type="text"
-                                    placeholder="New category"
-                                    value={newCategoryName}
-                                    onChange={(e) =>
-                                        setNewCategoryName(e.target.value)
-                                    }
-                                    style={{ marginRight: 8 }}
+                                <img
+                                    src={product.image_url}
+                                    alt={product.name}
+                                    style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '40vh',
+                                        borderRadius: '8px',
+                                        objectFit: 'contain',
+                                    }}
                                 />
-
-                                <button
-                                    onClick={async () => {
-                                        const trimmed = newCategoryName.trim()
-                                        if (!trimmed) return
-
-                                        const { data, error } = await supabase
-                                            .from('categories')
-                                            .insert({ name: trimmed })
-                                            .select()
-                                            .single()
-
-                                        if (error) {
-                                            alert(error.message)
-                                            return
-                                        }
-
-                                        setCategories((prev) => [...prev, data])
-                                        units.forEach((unit) => {
-                                            onSave(unit.id, {
-                                                category: data.name,
-                                            })
-                                        })
-                                        setNewCategoryName('')
-                                        setEditingCategory(false)
+                            </div>
+                        )}
+                        <div className="item-name">
+                            {!editingName ? (
+                                <>
+                                    <strong>
+                                        {product.name || 'Unnamed item'}
+                                    </strong>
+                                    <button
+                                        className="btn btn-edit"
+                                        onClick={() => {
+                                            setNewName(product.name || '')
+                                            setEditingName(true)
+                                        }}
+                                        style={{ marginLeft: 8 }}
+                                    >
+                                        ✏️
+                                    </button>
+                                </>
+                            ) : (
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '8px',
+                                        width: '100%',
                                     }}
                                 >
-                                    ➕
-                                </button>
-                            </div>
-
-                            <button
-                                className="btn btn-edit"
-                                onClick={() => setEditingCategory(false)}
-                            >
-                                ✔
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                <div className="item-qty">Units: {units.length}</div>
-
-                <div
-                    className="exp-title collapsible"
-                    onClick={() => setOpen((o) => !o)}
-                >
-                    Expirations {open ? '▼' : '►'}
-                </div>
-
-                {open && (
-                    <div className="exp-group">
-                        {units.map((unit) => {
-                            const status = getStatus(unit.expiration_date)
-
-                            return (
-                                <div
-                                    key={unit.id}
-                                    className={`exp-row ${status}`}
-                                >
-                                    {editingUnitId === unit.id ? (
-                                        <>
-                                            <input
-                                                type="date"
-                                                value={editingExpiration}
-                                                onChange={(e) =>
-                                                    setEditingExpiration(
-                                                        e.target.value,
+                                    <input
+                                        type="text"
+                                        value={newName}
+                                        onChange={(e) =>
+                                            setNewName(e.target.value)
+                                        }
+                                        style={{
+                                            fontSize: '1rem',
+                                            padding: '8px',
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                        }}
+                                    />
+                                    <div
+                                        style={{ display: 'flex', gap: '8px' }}
+                                    >
+                                        <button
+                                            style={{
+                                                padding: '8px 16px',
+                                                flex: 1,
+                                            }}
+                                            onClick={() => {
+                                                const trimmed = newName.trim()
+                                                if (trimmed) {
+                                                    units.forEach((u) =>
+                                                        onSave(u.id, {
+                                                            name: trimmed,
+                                                        }),
                                                     )
+                                                    setEditingName(false)
                                                 }
-                                            />
-
-                                            <div className="exp-row-actions">
-                                                <button onClick={saveUnit}>
-                                                    💾
-                                                </button>
-                                                <button onClick={cancelEdit}>
-                                                    ❌
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        onDelete(unit.id)
-                                                    }
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span>
-                                                {isoToDisplay(
-                                                    unit.expiration_date,
-                                                )}
-                                            </span>
-
-                                            <div className="exp-row-actions">
-                                                <button
-                                                    onClick={() =>
-                                                        startEditUnit(unit)
-                                                    }
-                                                >
-                                                    ✏️
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setPendingDeleteId(
-                                                            unit.id,
-                                                        )
-                                                        setShowDeleteModal(true)
-                                                    }}
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
+                                            }}
+                                        >
+                                            💾
+                                        </button>
+                                        <button
+                                            style={{
+                                                padding: '8px 16px',
+                                                flex: 1,
+                                            }}
+                                            onClick={() =>
+                                                setEditingName(false)
+                                            }
+                                        >
+                                            ❌
+                                        </button>
+                                    </div>
                                 </div>
-                            )
-                        })}
+                            )}
+                        </div>
+                        <div className="item-location">
+                            <strong>Location:</strong>
+                            <select
+                                value={units[0].location}
+                                onChange={(e) =>
+                                    units.forEach((u) =>
+                                        onSave(u.id, {
+                                            location: e.target.value,
+                                        }),
+                                    )
+                                }
+                                style={{ marginLeft: 8, padding: '4px' }}
+                            >
+                                <option value="pantry">Pantry</option>
+                                <option value="fridge">Fridge</option>
+                                <option value="freezer">Freezer</option>
+                            </select>
+                        </div>
+                        <div className="item-category">
+                            <strong>Category:</strong>
+
+                            {!editingCategory ? (
+                                <>
+                                    <span style={{ marginLeft: 6 }}>
+                                        {product.category || 'None'}
+                                    </span>
+                                    <button
+                                        className="btn btn-edit"
+                                        onClick={() => setEditingCategory(true)}
+                                        style={{ marginLeft: 12 }}
+                                    >
+                                        ✏️
+                                    </button>
+                                </>
+                            ) : (
+                                <div style={{ marginTop: 6 }}>
+                                    <select
+                                        value={product.category || ''}
+                                        onChange={(e) => {
+                                            units.forEach((unit) => {
+                                                onSave(unit.id, {
+                                                    category: e.target.value,
+                                                })
+                                            })
+                                            setEditingCategory(false)
+                                        }}
+                                        style={{
+                                            marginBottom: 8,
+                                            padding: '8px',
+                                            width: '100%',
+                                        }}
+                                    >
+                                        <option value="">
+                                            Select category…
+                                        </option>
+                                        {categories.map((c) => (
+                                            <option key={c.id} value={c.name}>
+                                                {c.name}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    <div
+                                        style={{
+                                            marginBottom: 8,
+                                            display: 'flex',
+                                            gap: '8px',
+                                            flexWrap: 'wrap',
+                                        }}
+                                    >
+                                        <input
+                                            type="text"
+                                            placeholder="New category"
+                                            value={newCategoryName}
+                                            onChange={(e) =>
+                                                setNewCategoryName(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            style={{
+                                                flexGrow: 1,
+                                                padding: '8px',
+                                            }}
+                                        />
+
+                                        <button
+                                            style={{ padding: '8px 12px' }}
+                                            onClick={async () => {
+                                                const trimmed =
+                                                    newCategoryName.trim()
+                                                if (!trimmed) return
+
+                                                const { data, error } =
+                                                    await supabase
+                                                        .from('categories')
+                                                        .insert({
+                                                            name: trimmed,
+                                                        })
+                                                        .select()
+                                                        .single()
+
+                                                if (error) {
+                                                    alert(error.message)
+                                                    return
+                                                }
+
+                                                setCategories((prev) => [
+                                                    ...prev,
+                                                    data,
+                                                ])
+                                                units.forEach((unit) => {
+                                                    onSave(unit.id, {
+                                                        category: data.name,
+                                                    })
+                                                })
+                                                setNewCategoryName('')
+                                                setEditingCategory(false)
+                                            }}
+                                        >
+                                            ➕
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        className="btn btn-edit"
+                                        onClick={() =>
+                                            setEditingCategory(false)
+                                        }
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px',
+                                        }}
+                                    >
+                                        ✔
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="item-qty">Units: {units.length}</div>
+
+                        <div className="exp-title">Expirations</div>
+                        <div className="exp-group">
+                            {units.map((unit) => {
+                                const status = getStatus(unit.expiration_date)
+
+                                return (
+                                    <div
+                                        key={unit.id}
+                                        className={`exp-row ${status}`}
+                                    >
+                                        {editingUnitId === unit.id ? (
+                                            <>
+                                                <input
+                                                    type="date"
+                                                    value={editingExpiration}
+                                                    onChange={(e) =>
+                                                        setEditingExpiration(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+
+                                                <div className="exp-row-actions">
+                                                    <button onClick={saveUnit}>
+                                                        💾
+                                                    </button>
+                                                    <button
+                                                        onClick={cancelEdit}
+                                                    >
+                                                        ❌
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            onDelete(unit.id)
+                                                        }
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>
+                                                    {isoToDisplay(
+                                                        unit.expiration_date,
+                                                    )}
+                                                </span>
+
+                                                <div className="exp-row-actions">
+                                                    <button
+                                                        onClick={() =>
+                                                            startEditUnit(unit)
+                                                        }
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setPendingDeleteId(
+                                                                unit.id,
+                                                            )
+                                                            setShowDeleteModal(
+                                                                true,
+                                                            )
+                                                        }}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
                     </div>
-                )}
-            </div>
+                </Modal>
+            )}
+
             {showDeleteModal && (
                 <Modal
                     title="Delete Item?"

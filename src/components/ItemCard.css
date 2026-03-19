@@ -154,8 +154,8 @@
     }
 
     .item-image {
-        width: 100% !important;
-        height: auto !important;
+        width: 100%;
+        height: auto;
         max-height: 220px;
         object-fit: contain;
         margin-bottom: 10px;
