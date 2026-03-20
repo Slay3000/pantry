@@ -167,3 +167,16 @@ ul.item-list {
     cursor: default;
     transform: none;
 }
+
+.pantry-search-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.pantry-search-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}

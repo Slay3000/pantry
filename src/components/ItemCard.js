@@ -80,60 +80,22 @@ export default function ItemCard({
         <li
             className={`item-card grouped ${getExpirationColor(nearestExpiration)}`}
             onClick={() => setShowDetails(true)}
-            style={{
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: '15px',
-                padding: '10px',
-                background: '#fff',
-            }}
         >
             {product.image_url ? (
                 <img
                     src={product.image_url}
                     alt={product.name}
                     className="item-image"
-                    style={{
-                        width: '60px',
-                        height: '60px',
-                        objectFit: 'cover',
-                        borderRadius: '4px',
-                        flexShrink: 0,
-                    }}
                 />
             ) : (
-                <div
-                    className="item-image placeholder"
-                    style={{
-                        width: '60px',
-                        height: '60px',
-                        fontSize: '0.7rem',
-                        flexShrink: 0,
-                    }}
-                >
-                    No Image
-                </div>
+                <div className="item-image placeholder">No Image</div>
             )}
 
-            <div className="item-info" style={{ flexGrow: 1, minWidth: 0 }}>
-                <div
-                    className="item-name"
-                    style={{
-                        marginBottom: '4px',
-                        fontWeight: '600',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                    }}
-                >
+            <div className="item-info">
+                <div className="item-name">
                     {product.name || 'Unnamed item'}
                 </div>
-                <div
-                    className="item-desc"
-                    style={{ fontSize: '0.9rem', color: '#555' }}
-                >
+                <div className="item-desc">
                     {units.length} unit{units.length !== 1 && 's'} •{' '}
                     {product.category || 'No category'}
                     {units[0]?.location && ` • ${units[0].location}`}
@@ -150,25 +112,15 @@ export default function ItemCard({
                     cancelText="Close"
                 >
                     <div
-                        className="item-details-view"
+                        className="item-modal-content"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {product.image_url && (
-                            <div
-                                style={{
-                                    textAlign: 'center',
-                                    marginBottom: '15px',
-                                }}
-                            >
+                            <div className="modal-image-container">
                                 <img
                                     src={product.image_url}
                                     alt={product.name}
-                                    style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '40vh',
-                                        borderRadius: '8px',
-                                        objectFit: 'contain',
-                                    }}
+                                    className="modal-product-image"
                                 />
                             </div>
                         )}
@@ -184,43 +136,24 @@ export default function ItemCard({
                                             setNewName(product.name || '')
                                             setEditingName(true)
                                         }}
-                                        style={{ marginLeft: 8 }}
+                                        className="btn btn-edit btn-icon-small"
                                     >
                                         ✏️
                                     </button>
                                 </>
                             ) : (
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '8px',
-                                        width: '100%',
-                                    }}
-                                >
+                                <div className="edit-name-container">
                                     <input
                                         type="text"
                                         value={newName}
                                         onChange={(e) =>
                                             setNewName(e.target.value)
                                         }
-                                        style={{
-                                            fontSize: '1rem',
-                                            padding: '8px',
-                                            width: '100%',
-                                            boxSizing: 'border-box',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                        }}
+                                        className="edit-input"
                                     />
-                                    <div
-                                        style={{ display: 'flex', gap: '8px' }}
-                                    >
+                                    <div className="edit-actions">
                                         <button
-                                            style={{
-                                                padding: '8px 16px',
-                                                flex: 1,
-                                            }}
+                                            className="btn-action"
                                             onClick={() => {
                                                 const trimmed = newName.trim()
                                                 if (trimmed) {
@@ -236,10 +169,7 @@ export default function ItemCard({
                                             💾
                                         </button>
                                         <button
-                                            style={{
-                                                padding: '8px 16px',
-                                                flex: 1,
-                                            }}
+                                            className="btn-action"
                                             onClick={() =>
                                                 setEditingName(false)
                                             }
@@ -261,7 +191,7 @@ export default function ItemCard({
                                         }),
                                     )
                                 }
-                                style={{ marginLeft: 8, padding: '4px' }}
+                                className="location-select"
                             >
                                 <option value="pantry">Pantry</option>
                                 <option value="fridge">Fridge</option>
@@ -273,20 +203,20 @@ export default function ItemCard({
 
                             {!editingCategory ? (
                                 <>
-                                    <span style={{ marginLeft: 6 }}>
+                                    <span className="category-text">
                                         {product.category || 'None'}
                                     </span>
                                     <button
-                                        className="btn btn-edit"
+                                        className="btn btn-edit btn-icon-medium"
                                         onClick={() => setEditingCategory(true)}
-                                        style={{ marginLeft: 12 }}
                                     >
                                         ✏️
                                     </button>
                                 </>
                             ) : (
-                                <div style={{ marginTop: 6 }}>
+                                <div className="edit-category-container">
                                     <select
+                                        className="category-select"
                                         value={product.category || ''}
                                         onChange={(e) => {
                                             units.forEach((unit) => {
@@ -295,11 +225,6 @@ export default function ItemCard({
                                                 })
                                             })
                                             setEditingCategory(false)
-                                        }}
-                                        style={{
-                                            marginBottom: 8,
-                                            padding: '8px',
-                                            width: '100%',
                                         }}
                                     >
                                         <option value="">
@@ -312,14 +237,7 @@ export default function ItemCard({
                                         ))}
                                     </select>
 
-                                    <div
-                                        style={{
-                                            marginBottom: 8,
-                                            display: 'flex',
-                                            gap: '8px',
-                                            flexWrap: 'wrap',
-                                        }}
-                                    >
+                                    <div className="new-category-row">
                                         <input
                                             type="text"
                                             placeholder="New category"
@@ -329,14 +247,11 @@ export default function ItemCard({
                                                     e.target.value,
                                                 )
                                             }
-                                            style={{
-                                                flexGrow: 1,
-                                                padding: '8px',
-                                            }}
+                                            className="new-category-input"
                                         />
 
                                         <button
-                                            style={{ padding: '8px 12px' }}
+                                            className="btn-add"
                                             onClick={async () => {
                                                 const trimmed =
                                                     newCategoryName.trim()
@@ -374,14 +289,10 @@ export default function ItemCard({
                                     </div>
 
                                     <button
-                                        className="btn btn-edit"
+                                        className="btn btn-edit btn-done"
                                         onClick={() =>
                                             setEditingCategory(false)
                                         }
-                                        style={{
-                                            width: '100%',
-                                            padding: '8px',
-                                        }}
                                     >
                                         ✔
                                     </button>

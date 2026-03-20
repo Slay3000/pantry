@@ -53,17 +53,16 @@ export default function ShoppingList({ pantryId }) {
 
     async function handleToggleItem(item) {
         const updates = { completed: !item.completed }
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('shopping_list')
             .update(updates)
             .eq('id', item.id)
+            .select()
 
         if (error) {
             alert(error.message)
-        } else {
-            setItems(
-                items.map((i) => (i.id === item.id ? { ...i, ...updates } : i)),
-            )
+        } else if (data && data.length > 0) {
+            setItems(items.map((i) => (i.id === item.id ? data[0] : i)))
         }
     }
 
@@ -126,7 +125,6 @@ export default function ShoppingList({ pantryId }) {
                     <ul className="shopping-list completed">
                         {completedItems.map((item) => (
                             <li key={item.id}>
-                                <span>{item.name}</span>
                                 <div className="item-actions">
                                     <button
                                         onClick={() => handleToggleItem(item)}
@@ -139,6 +137,7 @@ export default function ShoppingList({ pantryId }) {
                                         🗑️
                                     </button>
                                 </div>
+                                <span>{item.name}</span>
                             </li>
                         ))}
                     </ul>

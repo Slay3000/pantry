@@ -39,18 +39,26 @@
 
 .shopping-list li {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 10px;
     background: white;
     border-bottom: 1px solid #eee;
+    gap: 10px;
+}
+
+.shopping-list li span {
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.item-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 5px;
 }
 
 .shopping-list.completed li span {
     text-decoration: line-through;
     color: #888;
-}
-
-.item-actions button {
-    margin-left: 5px;
 }
