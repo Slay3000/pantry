@@ -10,7 +10,18 @@ import './AddItemForm.css'
 async function findProductInDB(barcode) {
     const { data, error } = await supabase
         .from('pantry_items')
-        .select('name, image_url, category')
+        .select(
+            `name, image_url, category, storage_zone, api_name, brand,
+             master_item:master_items (
+                id,
+                name,
+                category,
+                subcategory,
+                tags,
+                brand
+             )
+            `,
+        )
         .eq('barcode', barcode)
         .limit(1)
 
@@ -40,6 +51,27 @@ export default function AddItemForm({
     const [showSuccessModal, setShowSuccessModal] = useState(false)
     const [addedName, setAddedName] = useState('')
     const [location, setLocation] = useState('pantry')
+    const [apiName, setApiName] = useState('')
+    const [suggestions, setSuggestions] = useState([])
+    const [brand, setBrand] = useState('')
+    const [subcategory, setSubcategory] = useState('')
+    const [tags, setTags] = useState([])
+    const [tagInput, setTagInput] = useState('')
+
+    useEffect(() => {
+        async function fetchSuggestions() {
+            const { data } = await supabase
+                .from('master_items')
+                .select('name, category, subcategory, tags')
+                .order('name')
+
+            if (data) {
+                setSuggestions(data)
+            }
+        }
+        fetchSuggestions()
+    }, [])
+
     // Auto-fill using existing DB OR external API
     useEffect(() => {
         if (barcode.length < 8) return
@@ -50,7 +82,30 @@ export default function AddItemForm({
 
             if (localProduct) {
                 // Fill from your own database (FASTER & CONSISTENT)
-                setName(localProduct.name || '')
+                setName(
+                    localProduct.master_item?.name || localProduct.name || '',
+                )
+                setApiName(localProduct.api_name || '')
+                setBrand(localProduct.brand || '')
+                setSubcategory(localProduct.master_item?.subcategory || '')
+                const t = localProduct.master_item?.tags
+                if (Array.isArray(t)) {
+                    setTags(t)
+                } else if (typeof t === 'string') {
+                    setTags(
+                        t
+                            .split(',')
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                    )
+                } else {
+                    setTags([])
+                }
+
+                if (localProduct.storage_zone)
+                    setLocation(localProduct.storage_zone)
+                else if (localProduct.location)
+                    setLocation(localProduct.location)
 
                 if (localProduct.image_url) {
                     setImageUrlFromScan(localProduct.image_url)
@@ -71,7 +126,10 @@ export default function AddItemForm({
             const product = await lookupBarcode(barcode)
 
             if (product) {
-                if (product.name) setName(product.name)
+                if (product.name) {
+                    setName(product.name)
+                    setApiName(product.name)
+                }
                 if (product.category) {
                     const cleaned = cleanCategory(
                         product.category,
@@ -83,6 +141,9 @@ export default function AddItemForm({
                     setImageUrlFromScan(product.image)
                     setImagePreview(product.image)
                     setImage(null)
+                }
+                if (product.brand) {
+                    setBrand(product.brand)
                 }
             }
         }, 500)
@@ -146,11 +207,65 @@ export default function AddItemForm({
             imageUrl = uploadResult?.url || null
         }
 
+        // 1. Find or Create Master Item
+        let masterItemId = null
+        const trimmedName = name.trim()
+        if (trimmedName) {
+            const { data: existingMaster } = await supabase
+                .from('master_items')
+                .select('id, tags')
+                .eq('name', trimmedName)
+                .single()
+
+            if (existingMaster) {
+                masterItemId = existingMaster.id
+
+                const existingTags = Array.isArray(existingMaster.tags)
+                    ? existingMaster.tags
+                    : []
+                let combinedTags = [...existingTags, ...tags]
+                if (apiName && name.trim() !== apiName.trim()) {
+                    combinedTags.push(apiName.trim())
+                }
+                const uniqueTags = [...new Set(combinedTags)]
+
+                // Update existing master item with new info (tags, subcategory)
+                // This allows "merging" new tags (like a spanish name) into the existing master
+                await supabase
+                    .from('master_items')
+                    .update({
+                        subcategory: subcategory.trim() || null,
+                        tags: uniqueTags,
+                    })
+                    .eq('id', masterItemId)
+            } else {
+                const { data: newMaster, error: masterError } = await supabase
+                    .from('master_items')
+                    .insert([
+                        {
+                            name: trimmedName,
+                            category: category || null,
+                            subcategory: subcategory.trim() || null,
+                            tags: tags,
+                        },
+                    ])
+                    .select()
+                    .single()
+
+                if (!masterError && newMaster) {
+                    masterItemId = newMaster.id
+                }
+            }
+        }
+
         // Insert each expiration as a separate pantry_items row
         for (const exp of expirationDates) {
             const itemRow = {
                 pantry_id: pantryId,
                 name,
+                master_item_id: masterItemId,
+                brand,
+                storage_zone: location,
                 image_url: imageUrl,
                 barcode,
                 quantity: 1,
@@ -177,6 +292,23 @@ export default function AddItemForm({
         setAddedName(name)
         setShowSuccessModal(true)
 
+        setSuggestions((prev) => {
+            if (
+                !prev.some((s) => s.name.toLowerCase() === name.toLowerCase())
+            ) {
+                return [
+                    ...prev,
+                    {
+                        name,
+                        category,
+                        subcategory,
+                        tags: tags,
+                    },
+                ]
+            }
+            return prev
+        })
+
         // Reset form completely
         setName('')
         setBarcode('')
@@ -188,6 +320,11 @@ export default function AddItemForm({
         setImagePreview(null)
         setShowScanner(false)
         setLocation('pantry')
+        setApiName('')
+        setBrand('')
+        setSubcategory('')
+        setTags([])
+        setTagInput('')
 
         setLoading(false)
     }
@@ -199,6 +336,11 @@ export default function AddItemForm({
         setCategory('')
         setImageUrlFromScan(null)
         setLocation('pantry')
+        setApiName('')
+        setBrand('')
+        setSubcategory('')
+        setTags([])
+        setTagInput('')
     }, [barcode])
 
     useEffect(() => {
@@ -252,7 +394,10 @@ export default function AddItemForm({
                             const product = await lookupBarcode(code)
 
                             if (product) {
-                                if (product.name) setName(product.name)
+                                if (product.name) {
+                                    setName(product.name)
+                                    setApiName(product.name)
+                                }
                                 if (product.category) {
                                     const cleaned = cleanCategory(
                                         product.category,
@@ -262,6 +407,7 @@ export default function AddItemForm({
                                 }
                                 if (product.image)
                                     setImageUrlFromScan(product.image)
+                                if (product.brand) setBrand(product.brand)
                             }
                         }}
                     />
@@ -285,13 +431,62 @@ export default function AddItemForm({
                     onChange={(e) => setBarcode(e.target.value)}
                 />
 
-                <label>Name:</label>
+                <label>Master Item (Generic Name):</label>
                 <input
                     type="text"
                     required
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                        const val = e.target.value
+                        setName(val)
+                        const match = suggestions.find(
+                            (s) => s.name.toLowerCase() === val.toLowerCase(),
+                        )
+                        if (match) {
+                            if (match.category) setCategory(match.category)
+                            if (match.subcategory)
+                                setSubcategory(match.subcategory)
+                            if (match.tags)
+                                setTags(
+                                    Array.isArray(match.tags)
+                                        ? match.tags
+                                        : typeof match.tags === 'string'
+                                          ? match.tags
+                                                .split(',')
+                                                .map((s) => s.trim())
+                                                .filter(Boolean)
+                                          : [],
+                                )
+                        }
+                    }}
+                    list="name-suggestions"
                 />
+                <datalist id="name-suggestions">
+                    {suggestions.map((s) => (
+                        <option key={s.name} value={s.name} />
+                    ))}
+                </datalist>
+
+                <label>Brand:</label>
+                <input
+                    type="text"
+                    value={brand}
+                    placeholder="e.g. Orlando, Heinz"
+                    onChange={(e) => setBrand(e.target.value)}
+                />
+
+                {apiName && apiName !== name && (
+                    <div
+                        style={{
+                            fontSize: '0.8rem',
+                            color: '#666',
+                            marginBottom: 10,
+                        }}
+                    >
+                        Product: {apiName}
+                    </div>
+                )}
+
                 <label>Location:</label>
                 <select
                     value={location}
@@ -313,7 +508,8 @@ export default function AddItemForm({
                         </option>
                     ))}
                 </select>
-                <div>
+
+                <div style={{ marginTop: '8px', marginBottom: '8px' }}>
                     <input
                         type="text"
                         placeholder="New category"
@@ -350,6 +546,138 @@ export default function AddItemForm({
                         Add
                     </button>
                 </div>
+
+                <label>Subcategory:</label>
+                <input
+                    type="text"
+                    value={subcategory}
+                    placeholder="e.g. Tomatoes"
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    list="subcategory-suggestions"
+                />
+                <datalist id="subcategory-suggestions">
+                    {[
+                        ...new Set(
+                            suggestions
+                                .filter(
+                                    (s) => !category || s.category === category,
+                                )
+                                .map((s) => s.subcategory)
+                                .filter(Boolean),
+                        ),
+                    ]
+                        .sort()
+                        .map((s) => (
+                            <option key={s} value={s} />
+                        ))}
+                </datalist>
+
+                <label>Tags:</label>
+                <div
+                    style={{
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        padding: '8px',
+                        marginBottom: '10px',
+                    }}
+                >
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '5px',
+                            marginBottom: '8px',
+                        }}
+                    >
+                        {tags.map((tag) => (
+                            <span
+                                key={tag}
+                                style={{
+                                    background: '#e0e0e0',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    fontSize: '0.9rem',
+                                }}
+                            >
+                                {tag}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setTags(tags.filter((t) => t !== tag))
+                                    }
+                                    style={{
+                                        marginLeft: '6px',
+                                        border: 'none',
+                                        background: 'none',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        padding: 0,
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        ))}
+                        <input
+                            type="text"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const val = tagInput.trim()
+                                    if (val && !tags.includes(val)) {
+                                        setTags([...tags, val])
+                                    }
+                                    setTagInput('')
+                                }
+                            }}
+                            placeholder="Add tag..."
+                            style={{
+                                border: 'none',
+                                outline: 'none',
+                                flexGrow: 1,
+                                minWidth: '80px',
+                            }}
+                        />
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                        Suggested:
+                        {[
+                            ...new Set(
+                                suggestions
+                                    .filter(
+                                        (s) =>
+                                            !category ||
+                                            s.category === category,
+                                    )
+                                    .flatMap((s) =>
+                                        Array.isArray(s.tags) ? s.tags : [],
+                                    )
+                                    .filter(Boolean),
+                            ),
+                        ]
+                            .filter((t) => !tags.includes(t))
+                            .slice(0, 10)
+                            .map((t) => (
+                                <span
+                                    key={t}
+                                    onClick={() => setTags([...tags, t])}
+                                    style={{
+                                        marginLeft: '6px',
+                                        textDecoration: 'underline',
+                                        cursor: 'pointer',
+                                        color: '#007bff',
+                                    }}
+                                >
+                                    {t}
+                                </span>
+                            ))}
+                    </div>
+                </div>
+
                 {imagePreview && (
                     <div>
                         <img src={imagePreview} alt="Preview" />

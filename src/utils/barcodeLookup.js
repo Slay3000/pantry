@@ -8,9 +8,7 @@ export async function lookupBarcode(barcode) {
         if (data.status === 1) {
             const p = data.product
 
-            const name =
-                `[${p.brands || ''}] ` +
-                (p.product_name || p.product_name_en || p.product_name_fr || '')
+            const name = p.product_name || p.product_name_en || ''
 
             const image =
                 p.image_front_url ||
@@ -20,10 +18,12 @@ export async function lookupBarcode(barcode) {
                 null
             const category =
                 p.categories || p.category_properties_tags?.join(', ') || null
+            const brand = p.brands || ''
             return {
                 name,
                 image,
                 category,
+                brand,
             }
         }
 

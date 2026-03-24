@@ -30,17 +30,39 @@ export default function ItemCard({
     onSave,
     onDelete,
     onAddToShoppingList,
+    onUpdateMasterItem,
 }) {
     const [showDetails, setShowDetails] = useState(false)
     const [editingUnitId, setEditingUnitId] = useState(null)
     const [editingExpiration, setEditingExpiration] = useState(null)
-    const [editingCategory, setEditingCategory] = useState(false)
     const [categories, setCategories] = useState([])
     const [newCategoryName, setNewCategoryName] = useState('')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [pendingDeleteId, setPendingDeleteId] = useState(null)
-    const [editingName, setEditingName] = useState(false)
-    const [newName, setNewName] = useState('')
+    const [isEditing, setIsEditing] = useState(false)
+    const [editName, setEditName] = useState('')
+    const [editBrand, setEditBrand] = useState('')
+    const [editCategory, setEditCategory] = useState('')
+    const [editSubcategory, setEditSubcategory] = useState('')
+    const [editTags, setEditTags] = useState([])
+    const [editStorageZone, setEditStorageZone] = useState('pantry')
+    const [suggestions, setSuggestions] = useState([])
+    const [tagInput, setTagInput] = useState('')
+
+    // Fetch suggestions when entering edit mode
+    useEffect(() => {
+        if (isEditing && suggestions.length === 0) {
+            async function fetchSuggestions() {
+                const { data } = await supabase
+                    .from('master_items')
+                    .select('name, category, subcategory, tags')
+                    .order('name')
+                if (data) setSuggestions(data)
+            }
+            fetchSuggestions()
+        }
+    }, [isEditing, suggestions.length])
+
     useEffect(() => {
         async function fetchCategories() {
             const { data } = await supabase
@@ -60,6 +82,109 @@ export default function ItemCard({
     const cancelEdit = () => {
         setEditingUnitId(null)
         setEditingExpiration(null)
+    }
+
+    const startEditing = () => {
+        setEditName(product.master_item_name || product.name || 'Unnamed item')
+        setEditBrand(product.brand || product.master_item?.brand || '')
+        setEditCategory(product.category || '')
+        setEditSubcategory(product.master_item?.subcategory || '')
+        setEditTags(
+            Array.isArray(product.master_item?.tags)
+                ? product.master_item.tags
+                : [],
+        )
+        setEditStorageZone(
+            units[0]?.storage_zone || units[0]?.location || 'pantry',
+        )
+        setTagInput('')
+        setIsEditing(true)
+    }
+
+    const saveChanges = async () => {
+        const trimmedName = editName.trim()
+        if (!trimmedName) return
+
+        // 1. Check for name change/merge
+        let targetMasterId = product.master_item?.id
+        const currentMasterName = product.master_item?.name || product.name
+
+        if (trimmedName !== currentMasterName || !targetMasterId) {
+            const { data: existingMaster } = await supabase
+                .from('master_items')
+                .select('id')
+                .eq('name', trimmedName)
+                .single()
+
+            if (existingMaster) {
+                if (existingMaster.id !== targetMasterId) {
+                    targetMasterId = existingMaster.id
+                    // Re-link units
+                    await Promise.all(
+                        units.map((u) =>
+                            onSave(u.id, { master_item_id: targetMasterId }),
+                        ),
+                    )
+                }
+            } else {
+                if (targetMasterId) {
+                    await onUpdateMasterItem(targetMasterId, {
+                        name: trimmedName,
+                    })
+                } else {
+                    // Create new master item
+                    const { data: newMaster, error } = await supabase
+                        .from('master_items')
+                        .insert([
+                            {
+                                name: trimmedName,
+                                category: editCategory || null,
+                                subcategory: editSubcategory.trim() || null,
+                                tags: editTags,
+                                brand: editBrand.trim() || null,
+                            },
+                        ])
+                        .select()
+                        .single()
+
+                    if (!error && newMaster) {
+                        targetMasterId = newMaster.id
+                        // Link units
+                        await Promise.all(
+                            units.map((u) =>
+                                onSave(u.id, {
+                                    master_item_id: targetMasterId,
+                                }),
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. Update Master Item metadata
+        if (targetMasterId) {
+            await onUpdateMasterItem(targetMasterId, {
+                category: editCategory || null,
+                subcategory: editSubcategory.trim() || null,
+                tags: editTags,
+                brand: editBrand.trim() || null,
+            })
+        }
+
+        // 3. Update Units (Storage Zone & redundant category)
+        await Promise.all(
+            units.map((u) =>
+                onSave(u.id, {
+                    storage_zone: editStorageZone,
+                    location: editStorageZone,
+                    category: editCategory || null,
+                    brand: editBrand.trim() || null,
+                }),
+            ),
+        )
+
+        setIsEditing(false)
     }
 
     const saveUnit = () => {
@@ -93,12 +218,28 @@ export default function ItemCard({
 
             <div className="item-info">
                 <div className="item-name">
-                    {product.name || 'Unnamed item'}
+                    {product.master_item?.name ||
+                        product.master_item_name ||
+                        product.name ||
+                        'Unnamed item'}
                 </div>
+                {product.brand && (
+                    <div className="item-desc" style={{ fontWeight: '500' }}>
+                        {product.brand}
+                    </div>
+                )}
+                {(product.api_name ||
+                    (product.master_item_name &&
+                        product.name !== product.master_item_name)) && (
+                    <div className="item-desc" style={{ fontSize: '0.8rem' }}>
+                        {product.api_name || product.name}
+                    </div>
+                )}
                 <div className="item-desc">
                     {units.length} unit{units.length !== 1 && 's'} •{' '}
                     {product.category || 'No category'}
-                    {units[0]?.location && ` • ${units[0].location}`}
+                    {(units[0]?.storage_zone || units[0]?.location) &&
+                        ` • ${units[0].storage_zone || units[0].location}`}
                 </div>
             </div>
 
@@ -124,181 +265,392 @@ export default function ItemCard({
                                 />
                             </div>
                         )}
-                        <div className="item-name">
-                            {!editingName ? (
-                                <>
-                                    <strong>
-                                        {product.name || 'Unnamed item'}
-                                    </strong>
-                                    <button
-                                        className="btn btn-edit"
-                                        onClick={() => {
-                                            setNewName(product.name || '')
-                                            setEditingName(true)
-                                        }}
-                                        className="btn btn-edit btn-icon-small"
-                                    >
-                                        ✏️
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="edit-name-container">
-                                    <input
-                                        type="text"
-                                        value={newName}
-                                        onChange={(e) =>
-                                            setNewName(e.target.value)
-                                        }
-                                        className="edit-input"
-                                    />
-                                    <div className="edit-actions">
-                                        <button
-                                            className="btn-action"
-                                            onClick={() => {
-                                                const trimmed = newName.trim()
-                                                if (trimmed) {
-                                                    units.forEach((u) =>
-                                                        onSave(u.id, {
-                                                            name: trimmed,
-                                                        }),
-                                                    )
-                                                    setEditingName(false)
-                                                }
-                                            }}
-                                        >
-                                            💾
-                                        </button>
-                                        <button
-                                            className="btn-action"
-                                            onClick={() =>
-                                                setEditingName(false)
-                                            }
-                                        >
-                                            ❌
-                                        </button>
+                        {!isEditing ? (
+                            <div className="item-details-view">
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'flex-start',
+                                    }}
+                                >
+                                    <div>
+                                        <div className="item-name">
+                                            <strong>
+                                                {product.master_item?.name ||
+                                                    product.master_item_name ||
+                                                    product.name ||
+                                                    'Unnamed item'}
+                                            </strong>
+                                        </div>
+                                        {(product.api_name ||
+                                            (product.master_item_name &&
+                                                product.name !==
+                                                    product.master_item_name)) && (
+                                            <div className="item-desc">
+                                                {product.api_name ||
+                                                    product.name}
+                                            </div>
+                                        )}
+                                        {(product.brand ||
+                                            product.master_item?.brand) && (
+                                            <div className="item-desc">
+                                                Brand:{' '}
+                                                {product.brand ||
+                                                    product.master_item?.brand}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="item-location">
-                            <strong>Location:</strong>
-                            <select
-                                value={units[0].location}
-                                onChange={(e) =>
-                                    units.forEach((u) =>
-                                        onSave(u.id, {
-                                            location: e.target.value,
-                                        }),
-                                    )
-                                }
-                                className="location-select"
-                            >
-                                <option value="pantry">Pantry</option>
-                                <option value="fridge">Fridge</option>
-                                <option value="freezer">Freezer</option>
-                            </select>
-                        </div>
-                        <div className="item-category">
-                            <strong>Category:</strong>
-
-                            {!editingCategory ? (
-                                <>
-                                    <span className="category-text">
-                                        {product.category || 'None'}
-                                    </span>
                                     <button
                                         className="btn btn-edit btn-icon-medium"
-                                        onClick={() => setEditingCategory(true)}
+                                        onClick={startEditing}
+                                        style={{ fontSize: '1.2rem' }}
                                     >
-                                        ✏️
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="edit-category-container">
-                                    <select
-                                        className="category-select"
-                                        value={product.category || ''}
-                                        onChange={(e) => {
-                                            units.forEach((unit) => {
-                                                onSave(unit.id, {
-                                                    category: e.target.value,
-                                                })
-                                            })
-                                            setEditingCategory(false)
-                                        }}
-                                    >
-                                        <option value="">
-                                            Select category…
-                                        </option>
-                                        {categories.map((c) => (
-                                            <option key={c.id} value={c.name}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </select>
-
-                                    <div className="new-category-row">
-                                        <input
-                                            type="text"
-                                            placeholder="New category"
-                                            value={newCategoryName}
-                                            onChange={(e) =>
-                                                setNewCategoryName(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="new-category-input"
-                                        />
-
-                                        <button
-                                            className="btn-add"
-                                            onClick={async () => {
-                                                const trimmed =
-                                                    newCategoryName.trim()
-                                                if (!trimmed) return
-
-                                                const { data, error } =
-                                                    await supabase
-                                                        .from('categories')
-                                                        .insert({
-                                                            name: trimmed,
-                                                        })
-                                                        .select()
-                                                        .single()
-
-                                                if (error) {
-                                                    alert(error.message)
-                                                    return
-                                                }
-
-                                                setCategories((prev) => [
-                                                    ...prev,
-                                                    data,
-                                                ])
-                                                units.forEach((unit) => {
-                                                    onSave(unit.id, {
-                                                        category: data.name,
-                                                    })
-                                                })
-                                                setNewCategoryName('')
-                                                setEditingCategory(false)
-                                            }}
-                                        >
-                                            ➕
-                                        </button>
-                                    </div>
-
-                                    <button
-                                        className="btn btn-edit btn-done"
-                                        onClick={() =>
-                                            setEditingCategory(false)
-                                        }
-                                    >
-                                        ✔
+                                        ✏️ Edit
                                     </button>
                                 </div>
-                            )}
-                        </div>
+
+                                <div
+                                    className="item-location"
+                                    style={{ marginTop: '10px' }}
+                                >
+                                    <strong>Storage Zone:</strong>{' '}
+                                    {units[0].storage_zone ||
+                                        units[0].location ||
+                                        'Pantry'}
+                                </div>
+
+                                <div className="item-category">
+                                    <strong>Category:</strong>{' '}
+                                    {product.category || 'None'}
+                                </div>
+
+                                <div
+                                    className="item-extra-details"
+                                    style={{ marginTop: 5 }}
+                                >
+                                    <div>
+                                        <strong>Subcategory: </strong>
+                                        {product.master_item?.subcategory ||
+                                            '-'}
+                                    </div>
+                                    <div>
+                                        <strong>Tags: </strong>
+                                        {Array.isArray(
+                                            product.master_item?.tags,
+                                        )
+                                            ? product.master_item.tags.join(
+                                                  ', ',
+                                              )
+                                            : '-'}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="item-details-edit">
+                                <label>Name:</label>
+                                <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={(e) =>
+                                        setEditName(e.target.value)
+                                    }
+                                    list={`suggestions-${product.id}`}
+                                    className="edit-input"
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: '10px',
+                                    }}
+                                />
+                                <datalist id={`suggestions-${product.id}`}>
+                                    {suggestions.map((s) => (
+                                        <option key={s.name} value={s.name} />
+                                    ))}
+                                </datalist>
+
+                                <label>Brand:</label>
+                                <input
+                                    type="text"
+                                    value={editBrand}
+                                    onChange={(e) =>
+                                        setEditBrand(e.target.value)
+                                    }
+                                    className="edit-input"
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: '10px',
+                                    }}
+                                />
+
+                                <label>Storage Zone:</label>
+                                <select
+                                    value={editStorageZone}
+                                    onChange={(e) =>
+                                        setEditStorageZone(e.target.value)
+                                    }
+                                    className="location-select"
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: '10px',
+                                    }}
+                                >
+                                    <option value="pantry">Pantry</option>
+                                    <option value="fridge">Fridge</option>
+                                    <option value="freezer">Freezer</option>
+                                </select>
+
+                                <label>Category:</label>
+                                <select
+                                    className="category-select"
+                                    value={editCategory}
+                                    onChange={(e) =>
+                                        setEditCategory(e.target.value)
+                                    }
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: '5px',
+                                    }}
+                                >
+                                    <option value="">Select category…</option>
+                                    {categories.map((c) => (
+                                        <option key={c.id} value={c.name}>
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <div
+                                    className="new-category-row"
+                                    style={{ marginBottom: '10px' }}
+                                >
+                                    <input
+                                        type="text"
+                                        placeholder="New category"
+                                        value={newCategoryName}
+                                        onChange={(e) =>
+                                            setNewCategoryName(e.target.value)
+                                        }
+                                        className="new-category-input"
+                                    />
+                                    <button
+                                        className="btn-add"
+                                        onClick={async () => {
+                                            const trimmed =
+                                                newCategoryName.trim()
+                                            if (!trimmed) return
+                                            const { data, error } =
+                                                await supabase
+                                                    .from('categories')
+                                                    .insert({ name: trimmed })
+                                                    .select()
+                                                    .single()
+                                            if (error) {
+                                                alert(error.message)
+                                                return
+                                            }
+                                            setCategories((prev) => [
+                                                ...prev,
+                                                data,
+                                            ])
+                                            setEditCategory(data.name)
+                                            setNewCategoryName('')
+                                        }}
+                                    >
+                                        ➕
+                                    </button>
+                                </div>
+
+                                <label>Subcategory:</label>
+                                <input
+                                    className="edit-input"
+                                    value={editSubcategory}
+                                    onChange={(e) =>
+                                        setEditSubcategory(e.target.value)
+                                    }
+                                    list={`subcat-suggestions-${product.id}`}
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: '10px',
+                                    }}
+                                />
+                                <datalist
+                                    id={`subcat-suggestions-${product.id}`}
+                                >
+                                    {[
+                                        ...new Set(
+                                            suggestions
+                                                .filter(
+                                                    (s) =>
+                                                        !editCategory ||
+                                                        (
+                                                            s.category || ''
+                                                        ).toLowerCase() ===
+                                                            editCategory.toLowerCase(),
+                                                )
+                                                .map((s) => s.subcategory)
+                                                .filter(Boolean),
+                                        ),
+                                    ]
+                                        .sort()
+                                        .map((s) => (
+                                            <option key={s} value={s} />
+                                        ))}
+                                </datalist>
+
+                                <label>Tags:</label>
+                                <div
+                                    style={{
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        padding: '8px',
+                                        marginBottom: '10px',
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: '5px',
+                                            marginBottom: '8px',
+                                        }}
+                                    >
+                                        {editTags.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                style={{
+                                                    background: '#e0e0e0',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '12px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    fontSize: '0.9rem',
+                                                }}
+                                            >
+                                                {tag}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setEditTags(
+                                                            editTags.filter(
+                                                                (t) =>
+                                                                    t !== tag,
+                                                            ),
+                                                        )
+                                                    }
+                                                    style={{
+                                                        marginLeft: '6px',
+                                                        border: 'none',
+                                                        background: 'none',
+                                                        cursor: 'pointer',
+                                                        fontWeight: 'bold',
+                                                        padding: 0,
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        ))}
+                                        <input
+                                            type="text"
+                                            value={tagInput}
+                                            onChange={(e) =>
+                                                setTagInput(e.target.value)
+                                            }
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    const val = tagInput.trim()
+                                                    if (
+                                                        val &&
+                                                        !editTags.includes(val)
+                                                    ) {
+                                                        setEditTags([
+                                                            ...editTags,
+                                                            val,
+                                                        ])
+                                                    }
+                                                    setTagInput('')
+                                                }
+                                            }}
+                                            placeholder="Add tag..."
+                                            style={{
+                                                border: 'none',
+                                                outline: 'none',
+                                                flexGrow: 1,
+                                                minWidth: '80px',
+                                                background: 'transparent',
+                                            }}
+                                        />
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: '0.8rem',
+                                            color: '#666',
+                                        }}
+                                    >
+                                        Suggested:
+                                        {[
+                                            ...new Set(
+                                                suggestions
+                                                    .filter(
+                                                        (s) =>
+                                                            !editCategory ||
+                                                            (
+                                                                s.category || ''
+                                                            ).toLowerCase() ===
+                                                                editCategory.toLowerCase(),
+                                                    )
+                                                    .flatMap((s) =>
+                                                        Array.isArray(s.tags)
+                                                            ? s.tags
+                                                            : [],
+                                                    )
+                                                    .filter(Boolean),
+                                            ),
+                                        ]
+                                            .filter(
+                                                (t) => !editTags.includes(t),
+                                            )
+                                            .slice(0, 10)
+                                            .map((t) => (
+                                                <span
+                                                    key={t}
+                                                    onClick={() =>
+                                                        setEditTags([
+                                                            ...editTags,
+                                                            t,
+                                                        ])
+                                                    }
+                                                    style={{
+                                                        marginLeft: '6px',
+                                                        textDecoration:
+                                                            'underline',
+                                                        cursor: 'pointer',
+                                                        color: '#007bff',
+                                                    }}
+                                                >
+                                                    {t}
+                                                </span>
+                                            ))}
+                                    </div>
+                                </div>
+
+                                <div className="edit-actions">
+                                    <button
+                                        className="btn-action"
+                                        onClick={saveChanges}
+                                    >
+                                        💾 Save
+                                    </button>
+                                    <button
+                                        className="btn-action"
+                                        onClick={() => setIsEditing(false)}
+                                    >
+                                        ❌ Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="item-qty">Units: {units.length}</div>
 
@@ -387,15 +739,6 @@ export default function ItemCard({
                     onConfirm={() => {
                         onDelete(pendingDeleteId)
                         setShowDeleteModal(false)
-                        if (units.length === 1) {
-                            if (
-                                window.confirm(
-                                    `Add "${product.name}" to your shopping list?`,
-                                )
-                            ) {
-                                onAddToShoppingList(product.name)
-                            }
-                        }
                         setPendingDeleteId(null)
                     }}
                     onCancel={() => {

@@ -31,7 +31,18 @@ export default function Pantry({ user }) {
 
         const { data } = await supabase
             .from('pantry_items')
-            .select('*')
+            .select(
+                `
+                *,
+                master_item:master_items (
+                    id,
+                    name,
+                    category,
+                    subcategory,
+                    tags
+                )
+            `,
+            )
             .eq('pantry_id', pantryId)
             .order('expiration_date', { ascending: true })
 
@@ -69,6 +80,11 @@ export default function Pantry({ user }) {
 
     async function handleUpdateItem(id, updates) {
         await supabase.from('pantry_items').update(updates).eq('id', id)
+        loadItems()
+    }
+
+    async function handleUpdateMasterItem(id, updates) {
+        await supabase.from('master_items').update(updates).eq('id', id)
         loadItems()
     }
 
@@ -172,6 +188,7 @@ export default function Pantry({ user }) {
                         onSave={handleUpdateItem}
                         onDelete={handleDeleteItem}
                         onAddToShoppingList={handleAddToShoppingList}
+                        onUpdateMasterItem={handleUpdateMasterItem}
                     />
                 </div>
             )}

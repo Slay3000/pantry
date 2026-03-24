@@ -6,6 +6,7 @@ export default function ItemList({
     onSave,
     onDelete,
     onAddToShoppingList,
+    onUpdateMasterItem,
 }) {
     // Group items by product using barcode or name fallback
     const [categories, setCategories] = useState([])
@@ -24,7 +25,11 @@ export default function ItemList({
     const groups = {}
 
     for (const item of items) {
-        const key = item.barcode || item.name.trim()
+        const key =
+            item.master_item?.name ||
+            item.master_item_name ||
+            item.barcode ||
+            item.name.trim()
 
         if (!groups[key]) {
             groups[key] = { product: item, units: [] }
@@ -56,6 +61,7 @@ export default function ItemList({
                     onSave={onSave}
                     onDelete={onDelete}
                     onAddToShoppingList={onAddToShoppingList}
+                    onUpdateMasterItem={onUpdateMasterItem}
                 />
             ))}
         </ul>
