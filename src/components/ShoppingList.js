@@ -6,6 +6,7 @@ import './ShoppingList.css'
 export default function ShoppingList({ pantryId }) {
     const [items, setItems] = useState([])
     const [newItemName, setNewItemName] = useState('')
+    const [newSupermarket, setNewSupermarket] = useState('')
     const [loading, setLoading] = useState(true)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [itemToDelete, setItemToDelete] = useState(null)
@@ -39,7 +40,13 @@ export default function ShoppingList({ pantryId }) {
 
         const { data, error } = await supabase
             .from('shopping_list')
-            .insert([{ name: newItemName.trim(), pantry_id: pantryId }])
+            .insert([
+                {
+                    name: newItemName.trim(),
+                    pantry_id: pantryId,
+                    supermarket: newSupermarket.trim() || null,
+                },
+            ])
             .select()
             .single()
 
@@ -48,6 +55,7 @@ export default function ShoppingList({ pantryId }) {
         } else if (data) {
             setItems((prevItems) => [...prevItems, data])
             setNewItemName('')
+            setNewSupermarket('')
         }
     }
 
@@ -90,34 +98,89 @@ export default function ShoppingList({ pantryId }) {
     const activeItems = items.filter((i) => !i.completed)
     const completedItems = items.filter((i) => i.completed)
 
+    const itemsWithSupermarket = activeItems.filter((i) => i.supermarket)
+    const itemsWithoutSupermarket = activeItems.filter((i) => !i.supermarket)
+
+    const groupedActive = itemsWithSupermarket.reduce((acc, item) => {
+        if (!acc[item.supermarket]) acc[item.supermarket] = []
+        acc[item.supermarket].push(item)
+        return acc
+    }, {})
+
     return (
         <div className="shopping-list-container">
             <form onSubmit={handleAddItem} className="shopping-list-form">
                 <input
                     type="text"
-                    placeholder="Add item to shopping list"
+                    placeholder="Item name"
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
+                />
+                <input
+                    type="text"
+                    placeholder="Supermarket (optional)"
+                    value={newSupermarket}
+                    onChange={(e) => setNewSupermarket(e.target.value)}
                 />
                 <button type="submit">Add</button>
             </form>
             {loading && <p>Loading...</p>}
 
-            <ul className="shopping-list">
-                {activeItems.map((item) => (
-                    <li key={item.id}>
-                        <span>{item.name}</span>
-                        <div className="item-actions">
-                            <button onClick={() => handleToggleItem(item)}>
-                                ✓
-                            </button>
-                            <button onClick={() => handleDeleteClick(item)}>
-                                🗑️
-                            </button>
-                        </div>
-                    </li>
+            {Object.keys(groupedActive)
+                .sort()
+                .map((sm) => (
+                    <div key={sm} className="supermarket-group">
+                        <h4 className="supermarket-name">{sm}</h4>
+                        <ul className="shopping-list">
+                            {groupedActive[sm].map((item) => (
+                                <li key={item.id}>
+                                    <span>{item.name}</span>
+                                    <div className="item-actions">
+                                        <button
+                                            onClick={() =>
+                                                handleToggleItem(item)
+                                            }
+                                        >
+                                            ✓
+                                        </button>
+                                        <button
+                                            onClick={() =>
+                                                handleDeleteClick(item)
+                                            }
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 ))}
-            </ul>
+
+            {itemsWithoutSupermarket.length > 0 && (
+                <div className="supermarket-group no-assignment">
+                    <h4 className="supermarket-name">General</h4>
+                    <ul className="shopping-list">
+                        {itemsWithoutSupermarket.map((item) => (
+                            <li key={item.id}>
+                                <span>{item.name}</span>
+                                <div className="item-actions">
+                                    <button
+                                        onClick={() => handleToggleItem(item)}
+                                    >
+                                        ✓
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteClick(item)}
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {completedItems.length > 0 && (
                 <>
