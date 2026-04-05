@@ -495,6 +495,7 @@ export default function AddItemForm({
                     <option value="pantry">Pantry</option>
                     <option value="fridge">Fridge</option>
                     <option value="freezer">Freezer</option>
+                    <option value="emergency kit">Emergency Kit</option>
                 </select>
                 <label>Category:</label>
                 <select

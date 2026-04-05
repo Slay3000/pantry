@@ -7,9 +7,11 @@ export default function ShoppingList({ pantryId }) {
     const [items, setItems] = useState([])
     const [newItemName, setNewItemName] = useState('')
     const [newSupermarket, setNewSupermarket] = useState('')
+    const [selectedSupermarket, setSelectedSupermarket] = useState('')
     const [loading, setLoading] = useState(true)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [itemToDelete, setItemToDelete] = useState(null)
+    const [draggedItemId, setDraggedItemId] = useState(null)
 
     async function fetchItems() {
         if (!pantryId) return
@@ -38,13 +40,16 @@ export default function ShoppingList({ pantryId }) {
         e.preventDefault()
         if (!newItemName.trim()) return
 
+        const smValue =
+            selectedSupermarket === 'NEW' ? newSupermarket : selectedSupermarket
+
         const { data, error } = await supabase
             .from('shopping_list')
             .insert([
                 {
                     name: newItemName.trim(),
                     pantry_id: pantryId,
-                    supermarket: newSupermarket.trim() || null,
+                    supermarket: smValue.trim() || null,
                 },
             ])
             .select()
@@ -56,6 +61,7 @@ export default function ShoppingList({ pantryId }) {
             setItems((prevItems) => [...prevItems, data])
             setNewItemName('')
             setNewSupermarket('')
+            setSelectedSupermarket('')
         }
     }
 
@@ -95,15 +101,55 @@ export default function ShoppingList({ pantryId }) {
         setItemToDelete(null)
     }
 
+    function handleDragStart(e, id) {
+        setDraggedItemId(id)
+        e.dataTransfer.effectAllowed = 'move'
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault() // Required to allow dropping
+    }
+
+    function handleDrop(e, targetId) {
+        e.preventDefault()
+        if (!draggedItemId || draggedItemId === targetId) return
+
+        const newItems = [...items]
+        const draggedIndex = newItems.findIndex((i) => i.id === draggedItemId)
+        const targetIndex = newItems.findIndex((i) => i.id === targetId)
+
+        const [removed] = newItems.splice(draggedIndex, 1)
+        newItems.splice(targetIndex, 0, removed)
+
+        setItems(newItems)
+        setDraggedItemId(null)
+    }
+
     const activeItems = items.filter((i) => !i.completed)
     const completedItems = items.filter((i) => i.completed)
+
+    const uniqueSupermarkets = items
+        .map((i) => i.supermarket?.trim())
+        .filter(Boolean)
+        .reduce((acc, curr) => {
+            if (!acc.some((s) => s.toLowerCase() === curr.toLowerCase())) {
+                acc.push(curr)
+            }
+            return acc
+        }, [])
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
 
     const itemsWithSupermarket = activeItems.filter((i) => i.supermarket)
     const itemsWithoutSupermarket = activeItems.filter((i) => !i.supermarket)
 
     const groupedActive = itemsWithSupermarket.reduce((acc, item) => {
-        if (!acc[item.supermarket]) acc[item.supermarket] = []
-        acc[item.supermarket].push(item)
+        const smName = item.supermarket.trim()
+        const key =
+            Object.keys(acc).find(
+                (k) => k.toLowerCase() === smName.toLowerCase(),
+            ) || smName
+        if (!acc[key]) acc[key] = []
+        acc[key].push(item)
         return acc
     }, {})
 
@@ -116,12 +162,27 @@ export default function ShoppingList({ pantryId }) {
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
                 />
-                <input
-                    type="text"
-                    placeholder="Supermarket (optional)"
-                    value={newSupermarket}
-                    onChange={(e) => setNewSupermarket(e.target.value)}
-                />
+                <select
+                    value={selectedSupermarket}
+                    onChange={(e) => setSelectedSupermarket(e.target.value)}
+                    className="supermarket-select"
+                >
+                    <option value="">No Supermarket</option>
+                    {uniqueSupermarkets.map((sm) => (
+                        <option key={sm} value={sm}>
+                            {sm}
+                        </option>
+                    ))}
+                    <option value="NEW">-- Add New --</option>
+                </select>
+                {selectedSupermarket === 'NEW' && (
+                    <input
+                        type="text"
+                        placeholder="New supermarket name"
+                        value={newSupermarket}
+                        onChange={(e) => setNewSupermarket(e.target.value)}
+                    />
+                )}
                 <button type="submit">Add</button>
             </form>
             {loading && <p>Loading...</p>}
@@ -133,7 +194,16 @@ export default function ShoppingList({ pantryId }) {
                         <h4 className="supermarket-name">{sm}</h4>
                         <ul className="shopping-list">
                             {groupedActive[sm].map((item) => (
-                                <li key={item.id}>
+                                <li
+                                    key={item.id}
+                                    draggable
+                                    onDragStart={(e) =>
+                                        handleDragStart(e, item.id)
+                                    }
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => handleDrop(e, item.id)}
+                                    className="draggable-item"
+                                >
                                     <span>{item.name}</span>
                                     <div className="item-actions">
                                         <button
@@ -162,7 +232,14 @@ export default function ShoppingList({ pantryId }) {
                     <h4 className="supermarket-name">General</h4>
                     <ul className="shopping-list">
                         {itemsWithoutSupermarket.map((item) => (
-                            <li key={item.id}>
+                            <li
+                                key={item.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, item.id)}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, item.id)}
+                                className="draggable-item"
+                            >
                                 <span>{item.name}</span>
                                 <div className="item-actions">
                                     <button
