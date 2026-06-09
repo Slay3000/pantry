@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient'
 import Modal from './Modal'
 import './ShoppingList.css'
 
-export default function ShoppingList({ pantryId }) {
+export default function ShoppingList({ pantryId, onNavigateToAdd }) {
     const [items, setItems] = useState([])
     const [newItemName, setNewItemName] = useState('')
     const [newSupermarket, setNewSupermarket] = useState('')
@@ -271,6 +271,17 @@ export default function ShoppingList({ pantryId }) {
                                     >
                                         ↑
                                     </button>
+                                    {onNavigateToAdd && (
+                                        <button
+                                            className="btn-pantry-add"
+                                            onClick={() =>
+                                                onNavigateToAdd?.(item.name)
+                                            }
+                                            title="Add to Pantry"
+                                        >
+                                            📥
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => handleDeleteClick(item)}
                                     >

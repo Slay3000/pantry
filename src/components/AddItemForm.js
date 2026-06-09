@@ -34,6 +34,7 @@ export default function AddItemForm({
     onItemAdded,
     mode,
     onRemoveBarcode,
+    prefillName = '', // New prop from Shopping List
     lastRemoved,
 }) {
     const [name, setName] = useState('')
@@ -58,18 +59,26 @@ export default function AddItemForm({
     const [tags, setTags] = useState([])
     const [tagInput, setTagInput] = useState('')
 
+    // Handle prefill from shopping list
     useEffect(() => {
-        async function fetchSuggestions() {
-            const { data } = await supabase
-                .from('master_items')
-                .select('name, category, subcategory, tags')
-                .order('name')
+        if (prefillName) setName(prefillName)
+    }, [prefillName])
 
-            if (data) {
-                setSuggestions(data)
-            }
+    // Optimized: Fetch initial data in a single effect
+    useEffect(() => {
+        async function fetchData() {
+            const [masterItems, cats] = await Promise.all([
+                supabase
+                    .from('master_items')
+                    .select('name, category, subcategory, tags')
+                    .order('name'),
+                supabase.from('categories').select('*').order('name'),
+            ])
+
+            if (masterItems.data) setSuggestions(masterItems.data)
+            if (cats.data) setCategories(cats.data)
         }
-        fetchSuggestions()
+        fetchData()
     }, [])
 
     // Auto-fill using existing DB OR external API
@@ -150,20 +159,10 @@ export default function AddItemForm({
 
         return () => clearTimeout(timeout)
     }, [barcode])
-    useEffect(() => {
-        async function fetchCategories() {
-            const { data, error } = await supabase
-                .from('categories')
-                .select('*')
-                .order('name')
 
-            if (data) setCategories(data)
-        }
-        fetchCategories()
-    }, [])
     // Update number of expiration inputs
     function handleUnitsCountChange(value) {
-        const count = parseInt(value, 10)
+        const count = parseInt(value, 10) || 1
         setUnitsCount(count)
 
         const newExp = [...expirationDates]
@@ -258,33 +257,29 @@ export default function AddItemForm({
             }
         }
 
-        // Insert each expiration as a separate pantry_items row
-        for (const exp of expirationDates) {
-            const itemRow = {
-                pantry_id: pantryId,
-                name,
-                master_item_id: masterItemId,
-                brand,
-                storage_zone: location,
-                image_url: imageUrl,
-                barcode,
-                quantity: 1,
-                expiration_date: exp || null,
-                category: category || null,
-                delete_url: uploadResult?.deleteUrl || null,
-                image_id: uploadResult?.imageId || null,
-                location,
-            }
+        // Optimized: Bulk insert all units in one request
+        const rows = expirationDates.map((exp) => ({
+            pantry_id: pantryId,
+            name,
+            master_item_id: masterItemId,
+            brand,
+            storage_zone: location,
+            image_url: imageUrl,
+            barcode,
+            quantity: 1,
+            expiration_date: exp || null,
+            category: category || null,
+            delete_url: uploadResult?.deleteUrl || null,
+            image_id: uploadResult?.imageId || null,
+            location,
+        }))
 
-            const { error } = await supabase
-                .from('pantry_items')
-                .insert(itemRow)
+        const { error } = await supabase.from('pantry_items').insert(rows)
 
-            if (error) {
-                alert(error.message)
-                setLoading(false)
-                return
-            }
+        if (error) {
+            alert(error.message)
+            setLoading(false)
+            return
         }
 
         // Refresh parent list
@@ -329,18 +324,20 @@ export default function AddItemForm({
         setLoading(false)
     }
     useEffect(() => {
-        // If barcode is empty or changed significantly → reset name + image
-        setName('')
-        setImage(null)
-        setImagePreview(null)
-        setCategory('')
-        setImageUrlFromScan(null)
-        setLocation('pantry')
-        setApiName('')
-        setBrand('')
-        setSubcategory('')
-        setTags([])
-        setTagInput('')
+        // Optimized: Only reset if the barcode is actually cleared
+        if (!barcode) {
+            setName('')
+            setImage(null)
+            setImagePreview(null)
+            setCategory('')
+            setImageUrlFromScan(null)
+            setLocation('pantry')
+            setApiName('')
+            setBrand('')
+            setSubcategory('')
+            setTags([])
+            setTagInput('')
+        }
     }, [barcode])
 
     useEffect(() => {
@@ -387,28 +384,8 @@ export default function AddItemForm({
                         onDetected={async (code) => {
                             setBarcode(code)
                             setShowScanner(false)
-                            if (mode === 'remove') {
-                                onRemoveBarcode(code) // call pantry function
-                                return
-                            }
-                            const product = await lookupBarcode(code)
-
-                            if (product) {
-                                if (product.name) {
-                                    setName(product.name)
-                                    setApiName(product.name)
-                                }
-                                if (product.category) {
-                                    const cleaned = cleanCategory(
-                                        product.category,
-                                        categories.map((c) => c.name),
-                                    )
-                                    if (cleaned) setCategory(cleaned)
-                                }
-                                if (product.image)
-                                    setImageUrlFromScan(product.image)
-                                if (product.brand) setBrand(product.brand)
-                            }
+                            if (mode === 'remove') onRemoveBarcode(code)
+                            // The lookup is now handled by the [barcode] useEffect
                         }}
                     />
                 )}

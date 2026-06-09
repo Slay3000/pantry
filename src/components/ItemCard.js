@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { getExpirationColor } from '../utils/expirationColor'
 import Modal from './Modal'
@@ -27,15 +27,19 @@ function getStatus(iso) {
 export default function ItemCard({
     product,
     units,
+    isAuditMode,
+    categories: initialCategories = [],
     onSave,
     onDelete,
     onAddToShoppingList,
     onUpdateMasterItem,
+    onAuditSuccess, // New callback for Tinder mode
+    onExitAudit, // Callback to exit audit mode
 }) {
     const [showDetails, setShowDetails] = useState(false)
     const [editingUnitId, setEditingUnitId] = useState(null)
     const [editingExpiration, setEditingExpiration] = useState(null)
-    const [categories, setCategories] = useState([])
+    const [categories, setCategories] = useState(initialCategories)
     const [newCategoryName, setNewCategoryName] = useState('')
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [pendingDeleteId, setPendingDeleteId] = useState(null)
@@ -63,17 +67,13 @@ export default function ItemCard({
         }
     }, [isEditing, suggestions.length])
 
+    // Update local categories state when parent updates
     useEffect(() => {
-        async function fetchCategories() {
-            const { data } = await supabase
-                .from('categories')
-                .select('*')
-                .order('name')
-
-            if (data) setCategories(data)
+        if (initialCategories.length > 0) {
+            setCategories(initialCategories)
         }
-        fetchCategories()
-    }, [])
+    }, [initialCategories])
+
     const startEditUnit = (unit) => {
         setEditingUnitId(unit.id)
         setEditingExpiration(unit.expiration_date || '')
@@ -194,12 +194,137 @@ export default function ItemCard({
         cancelEdit()
     }
 
-    const expirationDates = units
-        .map((u) => u.expiration_date)
-        .filter(Boolean)
-        .sort((a, b) => new Date(a) - new Date(b))
+    // Performance: Memoize sorted dates
+    const expirationDates = useMemo(() => {
+        return units
+            .map((u) => u.expiration_date)
+            .filter(Boolean)
+            .sort((a, b) => new Date(a) - new Date(b))
+    }, [units])
 
     const nearestExpiration = expirationDates[0] || null
+
+    const handleAuditKeep = () => {
+        // Update all units of this product to be audited today
+        const now = new Date().toISOString()
+        // Fire and forget updates to make UI snappy
+        units.forEach((u) => onSave(u.id, { last_audited_at: now }))
+        if (onAuditSuccess) onAuditSuccess()
+    }
+
+    const handleAuditDelete = (unitId) => {
+        onDelete(unitId)
+    }
+
+    const handleDeleteAll = () => {
+        // Delete all units in the group and advance immediately
+        units.forEach((u) => onDelete(u.id))
+        if (onAuditSuccess) onAuditSuccess()
+    }
+
+    if (isAuditMode) {
+        return (
+            <li
+                className={`item-card audit-mode grouped ${getExpirationColor(nearestExpiration)}`}
+            >
+                <div className="audit-card-layout">
+                    {/* Exit button at top right */}
+                    <button className="btn-exit-audit" onClick={onExitAudit}>
+                        ✕
+                    </button>
+                    <div className="audit-header">
+                        <div
+                            className="item-name"
+                            title={
+                                product.master_item?.name ||
+                                product.name ||
+                                'Unnamed'
+                            }
+                        >
+                            <strong>
+                                {product.master_item?.name ||
+                                    product.name ||
+                                    'Unnamed'}
+                            </strong>
+                        </div>
+                        {product.brand && (
+                            <div className="item-desc" title={product.brand}>
+                                {product.brand}
+                            </div>
+                        )}
+                    </div>
+
+                    {product.image_url ? (
+                        <div className="audit-image-container">
+                            <img
+                                src={product.image_url}
+                                alt={product.name}
+                                className="audit-image-main"
+                            />
+                        </div>
+                    ) : (
+                        <div className="audit-image-container placeholder">
+                            No Image
+                        </div>
+                    )}
+
+                    <div className="audit-units-summary">
+                        {units.map((unit) => (
+                            <div
+                                key={unit.id}
+                                className={`audit-unit-mini-row ${getStatus(unit.expiration_date)}`}
+                            >
+                                <span>
+                                    {isoToDisplay(unit.expiration_date)}
+                                </span>
+                                <div className="audit-unit-actions">
+                                    <button onClick={() => startEditUnit(unit)}>
+                                        ✏️
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            handleAuditDelete(unit.id)
+                                        }
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
+                                {editingUnitId === unit.id && (
+                                    <div className="inline-edit">
+                                        <input
+                                            type="date"
+                                            value={editingExpiration}
+                                            onChange={(e) =>
+                                                setEditingExpiration(
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                        <button onClick={saveUnit}>💾</button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="audit-tinder-actions">
+                        <button
+                            className="btn-tinder discard"
+                            onClick={handleDeleteAll} // Directly call handleDeleteAll
+                        >
+                            ✖️ Not There
+                        </button>
+                        <button
+                            className="btn-tinder keep"
+                            onClick={handleAuditKeep}
+                        >
+                            ✔️ Still There
+                        </button>
+                    </div>
+                </div>
+            </li>
+        )
+    }
 
     return (
         <li
@@ -217,21 +342,45 @@ export default function ItemCard({
             )}
 
             <div className="item-info">
-                <div className="item-name">
+                <div
+                    className="item-name"
+                    title={
+                        product.master_item?.name ||
+                        product.master_item_name ||
+                        product.name ||
+                        'Unnamed item'
+                    }
+                >
                     {product.master_item?.name ||
                         product.master_item_name ||
                         product.name ||
                         'Unnamed item'}
                 </div>
                 {product.brand && (
-                    <div className="item-desc" style={{ fontWeight: '500' }}>
+                    <div
+                        className="item-desc"
+                        style={{
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}
+                    >
                         {product.brand}
                     </div>
                 )}
                 {(product.api_name ||
                     (product.master_item_name &&
                         product.name !== product.master_item_name)) && (
-                    <div className="item-desc" style={{ fontSize: '0.8rem' }}>
+                    <div
+                        className="item-desc"
+                        style={{
+                            fontSize: '0.8rem',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}
+                    >
                         {product.api_name || product.name}
                     </div>
                 )}
